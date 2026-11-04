@@ -1,0 +1,3262 @@
+<!doctype html>
+<html lang="ar">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap">
+        <style>
+        :root {
+            --brand-dark: #5c1717;
+            --brand-primary: #7a2020;
+            --brand-accent: #b31c2b;
+            --brand-light: #c9534f;
+            --brand-tint: rgba(179,28,43,0.08);
+            --brand-tint-strong: rgba(179,28,43,0.16);
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        #topNavbar {
+            flex-shrink: 0;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px;
+            background: var(--brand-dark);
+            border-bottom: 3px solid var(--brand-accent);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            direction: rtl;
+            position: relative;
+            z-index: 1000;
+        }
+        .navbar-titles {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .navbar-title {
+            margin: 0;
+            color: #fff;
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            font-size: 30px;
+            font-weight: 700;
+        }
+        .navbar-subtitle {
+            color: rgba(255,255,255,0.75);
+            font-size: 13px;
+            margin-top: 2px;
+            font-family: 'Open Sans', Arial, sans-serif;
+        }
+        .navbar-logo {
+            height: 70px;
+            width: auto;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+        #contentArea {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            direction: rtl;
+        }
+        #rightSidebar {
+            width: 300px;
+            flex-shrink: 0;
+            background: var(--brand-dark);
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            direction: rtl;
+            font-family: 'Open Sans', Tahoma, Arial, sans-serif;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+            z-index: 900;
+            position: relative;
+        }
+        /* عناصر تحكم Leaflet (leaflet-control) مصممة أصلاً للطفو فوق الخريطة (float/clear)؛
+           لما ننقلها لتعيش داخل الشريط الجانبي العادي لازم نلغي هذا الطفو حتى تاخذ مكانها
+           الطبيعي في تدفق الصفحة ولا تتراكب فوق العناصر اللي بعدها */
+        #rightSidebar .leaflet-control {
+            float: none !important;
+            clear: none !important;
+            margin: 0 !important;
+        }
+        #sidebarLayersSection {
+            position: relative;
+        }
+        .sidebar-heading {
+            padding: 8px 12px 5px;
+            margin: 0;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            letter-spacing: .3px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.15);
+        }
+        #sidebarLayersSection, #sidebarStatsSection {
+            padding: 3px 0 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+        .leaflet-control-layers-selector:checked {
+            accent-color: #c9534f !important;  /* غيّر هذا اللون لما تريد */
+        }
+        /* تخصيص شكل شجرة الطبقات (المفتاح) داخل الشريط الداكن */
+        #rightSidebar .leaflet-control-layers,
+        #rightSidebar .leaflet-control-layers-expanded {
+            position: static !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #ffffff !important;
+            font-size: 12.5px;
+            padding: 3px 12px;
+            width: auto !important;
+            max-width: none !important;
+            line-height: 1.5;
+        }
+        #rightSidebar .leaflet-control-layers-list,
+        #rightSidebar .leaflet-control-layers-base,
+        #rightSidebar .leaflet-control-layers-overlays {
+            position: static !important;
+            background: transparent !important;
+            color: #fff !important;
+        }
+        #rightSidebar .leaflet-control-layers-list label,
+        #rightSidebar .leaflet-control-layers-list span,
+        #rightSidebar .leaflet-control-layers-list li,
+        #rightSidebar .leaflet-control-layers-list div {
+            color: #fff !important;
+            background: transparent !important;
+        }
+        #rightSidebar .leaflet-control-layers-tree-toggle,
+        #rightSidebar .leaflet-control-layers a {
+            color: #fff !important;
+        }
+        #rightSidebar .leaflet-control-layers-separator {
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        /* ===== المفتاح - ترتيب: checkbox ← الصورة ← الاسم ===== */
+        /* إخفاء أزرار + - */
+        #rightSidebar .leaflet-layerstree-toggle,
+        #rightSidebar .leaflet-layerstree-toggle-close,
+        #rightSidebar .leaflet-layerstree-toggle-open,
+        #rightSidebar .leaflet-layerstree-toggle-btn {
+            display: none !important;
+        }
+
+        /* تثبيت ارتفاع الصفوف */
+        #rightSidebar .leaflet-layerstree-header {
+            height: 18px !important;
+            min-height: 18px !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 2px 4px !important;
+            border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        }
+
+        #rightSidebar .leaflet-layerstree-header:last-child {
+            border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        }
+
+        #rightSidebar .leaflet-layerstree-header-label {
+            display: flex !important;
+            align-items: center !important;
+            width: 100% !important;
+            height: 30px !important;
+            gap: 6px !important;
+        }
+
+        /* ترتيب العناصر: checkbox ← الصورة ← الاسم */
+        #rightSidebar .legend-row-flex {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 6px !important;
+            width: 100% !important;
+            direction: rtl !important;
+        }
+
+        #rightSidebar .leaflet-layerstree-header input[type="checkbox"] {
+            flex-shrink: 0 !important;
+            order: 0 !important;  /* checkbox أولاً */
+        }
+
+        #rightSidebar .legend-row-icon {
+            flex: 0 0 24px !important;
+            width: 24px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            order: 1 !important;  /* الصورة ثانياً */
+        }
+
+        #rightSidebar .legend-row-icon img {
+            width: 20px !important;
+            height: 14px !important;
+            object-fit: contain !important;
+        }
+
+        #rightSidebar .legend-row-text {
+            flex: 1 !important;
+            text-align: right !important;
+            direction: rtl !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            order: 2 !important;  /* الاسم ثالثاً */
+        }
+
+        /* تثبيت حجم الحاوية */
+        #sidebarLayersSection {
+            min-height: 200px !important;
+        }
+
+        /* إخفاء الصفوف بدون تغيير الحجم */
+        #rightSidebar .leaflet-layerstree-header.hidden-row {
+            visibility: hidden !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            pointer-events: none !important;
+        }
+        /* تخصيص لوحة الإحصائيات داخل الشريط الداكن */
+        #sidebarStatsSection .stats-dashboard {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            color: #fff;
+            padding: 3px 12px 2px;
+            min-width: 0;
+            font-size: 10.5px;
+        }
+        #sidebarStatsSection .stats-dashboard h3 {
+            display: none;
+        }
+        #sidebarStatsSection .stats-body td {
+            color: #fff;
+                padding: 4px 4px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.30);
+        }
+        #sidebarStatsSection .stats-body .num-cell {
+            color: rgba(255,255,255,0.85);
+        }
+        #sidebarStatsSection .stats-body .col-header {
+            color: rgba(255,255,255,0.55);
+        }
+        #sidebarStatsSection .stats-body tr.total-row td {
+            border-top: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+        }
+        #sidebarStatsSection .stats-body tr.active-row td {
+            background: rgba(255,255,255,0.14);
+        }
+        #sidebarStatsSection .stats-body tr.stat-row:hover td {
+            background: rgba(255,255,255,0.08);
+        }
+        #sidebarStatsSection .stats-body .reset-filter-btn {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+        }
+        #sidebarStatsSection .stats-body .reset-filter-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        #sidebarStatsSection .attr-btn {
+            color: rgba(255,255,255,0.85);
+            font-size: 9.5px;
+            padding: 1px 3px;
+            margin-inline-start: auto;
+        }
+        #sidebarStatsSection .attr-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.18);
+        }
+        #sidebarChartsSection {
+            padding: 5px 12px 8px;
+            font-family: 'Open Sans', Tahoma, Arial, sans-serif;
+        }
+        .pie-chart-wrap {
+            margin-bottom: 8px;
+        }
+        .pie-chart-wrap:last-child {
+            margin-bottom: 2px;
+        }
+        .pie-chart-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.85);
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .pie-chart-svg {
+            display: block;
+            width: 84px;
+            height: 84px;
+            margin: 0 auto 5px;
+        }
+        .pie-slice {
+            stroke: var(--brand-dark);
+            stroke-width: 1;
+            cursor: pointer;
+            transition: opacity .15s ease, transform .15s ease;
+            transform-origin: 60px 60px;
+        }
+        .pie-slice:hover {
+            opacity: 0.85;
+        }
+        .pie-slice.active-slice {
+            stroke: #fff;
+            stroke-width: 2;
+            transform: scale(1.05);
+        }
+        .pie-slice.dimmed-slice {
+            opacity: 0.25;
+        }
+        .pie-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .pie-legend-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9.5px;
+            color: #fff;
+            cursor: pointer;
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+        .pie-legend-row:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .pie-legend-row.active-legend-row {
+            background: rgba(255,255,255,0.18);
+        }
+        .pie-legend-row.dimmed-row {
+            opacity: 0.4;
+        }
+        .pie-swatch {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .pie-legend-label {
+            flex: 1;
+        }
+        .pie-legend-pct {
+            font-variant-numeric: tabular-nums;
+            color: rgba(255,255,255,0.65);
+        }
+        #map {
+            flex: 1;
+            min-height: 0;
+            min-width: 0;
+            width: 100%;
+        }
+        .stats-dashboard {
+            direction: rtl;
+            text-align: right;
+            font-family: 'Open Sans', Tahoma, Arial, sans-serif;
+            background: rgba(255,255,255,0.92);
+            border-radius: 8px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.4);
+            padding: 10px 12px;
+            min-width: 235px;
+            font-size: 12.5px;
+            color: #222;
+        }
+        .stats-dashboard h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            text-align: center;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .stats-dashboard h3 .toggle-arrow {
+            float: left;
+            font-size: 11px;
+            color: #666;
+        }
+        .stats-body table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .stats-body td {
+            padding: 1px 2px;
+            white-space: nowrap;
+        }
+        .stats-body .swatch {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .stats-body .layer-name {
+            font-weight: 600;
+        }
+        .stats-body .num-cell {
+            text-align: left;
+            font-variant-numeric: tabular-nums;
+            color: #333;
+        }
+        .stats-body tr.total-row td {
+            border-top: 1px solid #999;
+            padding-top: 3px;
+            font-weight: 700;
+            color: #111;
+        }
+        .stats-body .col-header {
+            font-size: 9.5px;
+            color: #666;
+            font-weight: 600;
+            text-align: left;
+        }
+        .stats-dashboard.collapsed .stats-body {
+            display: none;
+        }
+        .stats-body tr.stat-row {
+            cursor: pointer;
+        }
+        .stats-body tr.stat-row:hover td {
+            background: rgba(0,0,0,0.05);
+        }
+        .stats-body tr.active-row td {
+            background: var(--brand-tint-strong);
+        }
+        .stats-body tr.active-row td:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        .stats-body tr.active-row td:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        .stats-body tr.hidden-row {
+            display: none;
+        }
+        .stats-body .reset-filter-btn {
+            display: none;
+            margin-bottom: 3px;
+            padding: 2px 6px;
+            background: #eee;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 9.5px;
+            color: #333;
+        }
+        .stats-body .reset-filter-btn:hover {
+            background: #ddd;
+        }
+        .attr-btn {
+            cursor: pointer;
+            color: var(--brand-primary);
+            font-size: 11px;
+            margin-right: 6px;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .attr-btn:hover {
+            background: var(--brand-tint);
+            color: var(--brand-accent);
+        }
+        .attr-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10000;
+            pointer-events: none;
+        }
+        .attr-modal-overlay.open {
+            display: block;
+        }
+        .attr-modal {
+            pointer-events: auto;
+            direction: rtl;
+            background: #fff;
+            border-radius: 8px;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            width: 44%;
+            min-width: 300px;
+            max-width: 520px;
+            height: 62vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+            font-family: 'Open Sans', Tahoma, Arial, sans-serif;
+        }
+        @media (max-width: 700px) {
+            .attr-modal {
+                left: 8px;
+                right: 8px;
+                width: auto;
+                max-width: none;
+            }
+        }
+        .attr-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+        .attr-modal-header h4 {
+            margin: 0;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+        .attr-modal-count {
+            font-size: 11.5px;
+            color: #666;
+            white-space: nowrap;
+        }
+        .attr-modal-close {
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+            color: #666;
+            padding: 0 6px;
+        }
+        .attr-modal-close:hover { color: #000; }
+        .attr-modal-search {
+            padding: 8px 14px 0;
+            flex-shrink: 0;
+        }
+        .attr-modal-search input {
+            width: 100%;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+        .attr-modal-body {
+            overflow: auto;
+            padding: 8px 14px 14px;
+            flex: 1;
+            min-height: 0;
+        }
+        .attr-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .attr-table th, .attr-table td {
+            border: 1px solid #ddd;
+            padding: 5px 8px;
+            text-align: right;
+        }
+        .attr-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f2f2f2;
+            color: #222;
+            font-weight: 600;
+        }
+        .attr-table tbody tr {
+            cursor: pointer;
+        }
+        .attr-table tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .attr-table tbody tr:hover {
+            background: var(--brand-tint);
+        }
+        .attr-table tbody tr.attr-row-selected {
+            background: var(--brand-tint-strong) !important;
+        }
+        .leaflet-local-search {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        }
+        .leaflet-local-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+        }
+        .local-search-toggle {
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--brand-primary);
+            width: 18px;
+            text-align: center;
+        }
+        .local-search-toggle:hover {
+            color: var(--brand-accent);
+        }
+        #localSearchInput {
+            border: none;
+            outline: none;
+            font-size: 12.5px;
+            width: 160px;
+            direction: rtl;
+        }
+        .local-search-results {
+            direction: rtl;
+            background: #fff;
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            max-height: 220px;
+            overflow: auto;
+            font-size: 12.5px;
+        }
+        .local-search-item {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-top: 1px solid #eee;
+        }
+        .local-search-item:hover {
+            background: var(--brand-tint);
+        }
+        .local-search-empty {
+            padding: 6px 8px;
+            color: #999;
+        }
+        /* ME نافذة تخطيط الطباعة (Print Layout) */
+        .layout-panel {
+            display: none;
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10001;
+            direction: rtl;
+            background: #fff;
+            border-radius: 8px;
+            width: 300px;
+            max-width: 90vw;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+            font-family: 'Open Sans', Tahoma, Arial, sans-serif;
+        }
+        .layout-panel.open {
+            display: block;
+        }
+        .layout-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        .layout-panel-header h4 {
+            margin: 0;
+            font-size: 14px;
+        }
+        .layout-panel-close {
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            color: #666;
+            padding: 0 6px;
+        }
+        .layout-panel-close:hover { color: #000; }
+        .layout-panel-body {
+            padding: 10px 12px 12px;
+        }
+        .layout-panel-body label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        .layout-panel-body input[type="text"] {
+            width: 100%;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        .layout-panel-check {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            margin-bottom: 7px;
+        }
+        .layout-panel-check input {
+            margin: 0;
+        }
+        .layout-panel-print-btn {
+            width: 100%;
+            margin-top: 6px;
+            padding: 7px 10px;
+            background: var(--brand-accent);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .layout-panel-print-btn:hover {
+            background: var(--brand-dark);
+        }
+        .layout-print-toggle i {
+            font-size: 15px;
+        }
+        .labels-toggle-control i {
+            font-size: 15px;
+        }
+        .labels-toggle-control.labels-off a i {
+            opacity: 0.35;
+        }
+        .date-filter-toggle i {
+            font-size: 15px;
+        }
+        .date-filter-hint {
+            font-size: 10.5px;
+            color: #777;
+            line-height: 1.5;
+            margin: -4px 0 10px;
+        }
+        .date-filter-error {
+            display: none;
+            font-size: 11.5px;
+            color: #c0392b;
+            background: #fdecea;
+            border-radius: 4px;
+            padding: 5px 8px;
+            margin-bottom: 8px;
+        }
+        .date-filter-reset-btn {
+            width: 100%;
+            margin-top: 8px;
+            padding: 7px 10px;
+            background: #eee;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+        .date-filter-reset-btn:hover {
+            background: #ddd;
+        }
+        .date-report-modal {
+            direction: rtl;
+        }
+        .date-report-range {
+            padding: 0 14px;
+            font-size: 11.5px;
+            color: #666;
+            flex-shrink: 0;
+        }
+        .date-report-subheading {
+            margin: 12px 0 6px;
+            font-size: 12.5px;
+            color: #333;
+        }
+        .date-report-footer {
+            padding: 8px 14px 12px;
+            flex-shrink: 0;
+        }
+        .date-report-summary-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
+        }
+        .date-report-summary-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #eee;
+        }
+        .date-report-summary-table .layer-name {
+            font-weight: 600;
+        }
+        .date-report-summary-table .num-cell {
+            text-align: left;
+            font-variant-numeric: tabular-nums;
+            color: #333;
+        }
+        .date-report-summary-table .col-header {
+            font-size: 9.5px;
+            color: #666;
+            font-weight: 600;
+            text-align: left;
+        }
+        .date-report-summary-table tr.total-row td {
+            border-top: 1px solid #999;
+            padding-top: 6px;
+            font-weight: 700;
+            color: #111;
+        }
+        /* إخفاء تسميات الطبقات الدائمة (bindTooltip permanent) لما الزر يكون مطفي */
+        #map.map-labels-hidden .leaflet-tooltip {
+            display: none !important;
+        }
+        .print-only {
+            display: none;
+        }
+        #printNorthArrow {
+            position: fixed;
+            top: 14mm;
+            left: 14mm;
+        }
+        #printTitleBox {
+            position: fixed;
+            top: 10mm;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(255,255,255,0.85);
+            padding: 4px 14px;
+            border-radius: 4px;
+            direction: rtl;
+        }
+        #printTitleBox h2 {
+            margin: 0;
+            font-size: 16pt;
+            font-family: 'Open Sans', Tahoma, Arial, sans-serif;
+        }
+        #printDateBox {
+            position: fixed;
+            bottom: 10mm;
+            right: 14mm;
+            font-size: 9pt;
+            background: rgba(255,255,255,0.85);
+            padding: 3px 8px;
+            border-radius: 4px;
+            direction: rtl;
+        }
+        #printLegendBox {
+            position: fixed;
+            bottom: 12mm;
+            left: 14mm;
+            background: rgba(255,255,255,0.9);
+            padding: 6px 10px;
+            border-radius: 4px;
+            direction: rtl;
+            font-size: 9pt;
+            max-width: 55mm;
+        }
+        #printLegendBox h5 {
+            margin: 0 0 5px;
+            font-size: 10pt;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 3px;
+        }
+        #printLegendBox .print-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 3px;
+        }
+        #printLegendBox .print-legend-item img {
+            height: 12px;
+        }
+        .leaflet-control-scale {
+            display: none;
+        }
+        .title-logo {
+            height: 32px;
+            width: auto;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @media print {
+            @page {
+                size: A3 landscape;
+                margin: 10mm;
+            }
+            body * {
+                visibility: hidden !important;
+            }
+            #map, #map .leaflet-pane, #map .leaflet-pane * {
+                visibility: visible !important;
+            }
+            #map .leaflet-control-container {
+                visibility: hidden !important;
+            }
+            .attr-modal-overlay {
+                display: none !important;
+            }
+            .layout-panel {
+                display: none !important;
+            }
+            .date-report-modal-overlay {
+                display: none !important;
+            }
+            #map {
+                position: fixed !important;
+                top: 0; left: 0;
+                width: 100vw !important;
+                height: 100vh !important;
+            }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .print-only, .print-only * {
+                visibility: visible !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .leaflet-control-scale {
+                display: block !important;
+                visibility: visible !important;
+                position: fixed !important;
+                bottom: 10mm !important;
+                left: 50% !important;
+                transform: translateX(-50%);
+                background: rgba(255,255,255,0.92);
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 10pt;
+            }
+            .leaflet-control-scale * {
+                visibility: visible !important;
+            }
+            .leaflet-control-scale-line {
+                border: 2px solid #222 !important;
+                border-top: none !important;
+                color: #111 !important;
+                font-size: 10pt !important;
+                font-weight: 700 !important;
+                line-height: 1.4 !important;
+                padding: 1px 4px 0 !important;
+            }
+        }
+        
+        /* =====================================================================
+           PRO-UI v2 — تحسينات الشكل والوظائف الإضافية (كتلة مستقلة)
+           كل ما بعد هذا السطر مضاف فوق تصدير QGIS2WEB ولا يغيّر بنيته.
+           ===================================================================== */
+        :root {
+            --font-ui: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
+        }
+        body, #rightSidebar, #sidebarChartsSection, .stats-dashboard, .attr-modal,
+        .layout-panel, .navbar-subtitle, .leaflet-local-search, .timeline-bar,
+        .pp, #printTitleBox h2, input, button, select {
+            font-family: var(--font-ui);
+        }
+
+        /* ----- الشريط العلوي + زر الشريط الجانبي ----- */
+        .navbar-start {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .sidebar-toggle-btn {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .sidebar-toggle-btn:hover { background: rgba(255,255,255,0.18); }
+        body.sidebar-collapsed #rightSidebar { display: none; }
+        #sidebarBackdrop { display: none; }
+
+        /* ----- الشريط الجانبي ----- */
+        #rightSidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.35) transparent;
+        }
+        #rightSidebar::-webkit-scrollbar { width: 8px; }
+        #rightSidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+        .sidebar-heading { font-size: 13px; padding: 9px 14px 7px; }
+        #sidebarLayersSection { min-height: 0 !important; }
+
+        /* ----- الإحصائيات (جدول) ----- */
+        #sidebarStatsSection .stats-dashboard { font-size: 11.5px; }
+        #sidebarStatsSection .stats-body td { padding: 6px 3px; }
+        #sidebarStatsSection .attr-btn { font-size: 11.5px; }
+        .layer-name-flex { display: flex; align-items: center; gap: 6px; }
+        .layer-name-flex .swatch { margin: 0; flex-shrink: 0; }
+
+        /* ----- بطاقات الأرقام + نسبة الإنجاز ----- */
+        #sidebarKpiSection {
+            padding: 10px 12px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+        .kpi-progress {
+            background: rgba(0,0,0,0.18);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+        .kpi-progress-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 12.5px;
+            color: rgba(255,255,255,0.85);
+        }
+        .kpi-progress-pct { font-size: 28px; font-weight: 700; color: #fff; line-height: 1; }
+        .kpi-bar {
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.18);
+            margin: 9px 0 7px;
+            overflow: hidden;
+        }
+        .kpi-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            background: linear-gradient(90deg, #e8a33d, #7bd36b);
+            transition: width .6s ease;
+        }
+        .kpi-progress-sub { font-size: 11px; color: rgba(255,255,255,0.7); }
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .kpi-card {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-inline-start: 4px solid var(--kc, #fff);
+            border-radius: 10px;
+            padding: 7px 10px 8px;
+            cursor: pointer;
+            transition: background .15s ease, opacity .15s ease;
+        }
+        .kpi-card:hover { background: rgba(255,255,255,0.13); }
+        .kpi-card.active { background: rgba(255,255,255,0.2); box-shadow: 0 0 0 1px #fff inset; }
+        .kpi-card.dimmed { opacity: 0.4; }
+        .kpi-card-label { font-size: 11px; color: rgba(255,255,255,0.75); }
+        .kpi-card-num { font-size: 21px; font-weight: 700; line-height: 1.3; }
+        .kpi-card-sub { font-size: 10.5px; color: rgba(255,255,255,0.65); }
+
+        /* ----- المخططات الدائرية (أكبر وأوضح) ----- */
+        .pie-chart-title { font-size: 12px; }
+        .pie-chart-svg { width: 112px; height: 112px; }
+        .pie-legend-row { font-size: 11px; }
+
+        /* ----- مبدّل خريطة الأساس ----- */
+        #sidebarBasemapSection {
+            padding: 8px 12px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+        .bm-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .bm-btn {
+            padding: 6px 2px;
+            font-size: 11.5px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .bm-btn:hover { background: rgba(255,255,255,0.14); }
+        .bm-btn.active { background: var(--brand-accent); border-color: #fff; }
+        .bm-opacity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+        }
+        .bm-opacity input { flex: 1; min-width: 0; accent-color: var(--brand-light); }
+
+        /* ----- تسميات الخريطة: حدّ أبيض بدل الخلفية + ظهور حسب التقريب ----- */
+        .leaflet-tooltip.css__2, .leaflet-tooltip.css__4, .leaflet-tooltip.css__5 {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        .leaflet-tooltip.css__2::before, .leaflet-tooltip.css__4::before, .leaflet-tooltip.css__5::before {
+            display: none;
+        }
+        .leaflet-tooltip.css__2 div, .leaflet-tooltip.css__4 div, .leaflet-tooltip.css__5 div {
+            background: transparent !important;
+            font-family: var(--font-ui) !important;
+            font-size: 11.5px !important;
+            font-weight: 700;
+            text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 5px #fff;
+        }
+        #map.lbl-off-css__2 .leaflet-tooltip.css__2,
+        #map.lbl-off-css__4 .leaflet-tooltip.css__4,
+        #map.lbl-off-css__5 .leaflet-tooltip.css__5 {
+            visibility: hidden !important;
+        }
+
+        /* ----- النوافذ المنبثقة (Popups) ----- */
+        .pro-popup .leaflet-popup-content-wrapper { padding: 0; border-radius: 10px; overflow: hidden; }
+        .pro-popup .leaflet-popup-content { margin: 0; width: auto !important; }
+        .pro-popup .leaflet-popup-close-button { color: #fff !important; font-size: 20px; top: 6px; }
+        .pp { direction: rtl; text-align: right; min-width: 220px; }
+        .pp-head { padding: 11px 16px 9px; color: #fff; background: var(--pp-c, #7a2020); }
+        .pp-chip {
+            display: inline-block;
+            font-size: 10.5px;
+            background: rgba(255,255,255,0.22);
+            padding: 1px 9px;
+            border-radius: 10px;
+            margin-bottom: 4px;
+        }
+        .pp-title { font-size: 15px; font-weight: 700; line-height: 1.35; word-break: break-word; }
+        .pp-body { padding: 6px 16px 12px; }
+        .pp-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e4e4e4;
+            font-size: 12.5px;
+        }
+        .pp-row:last-child { border-bottom: none; }
+        .pp-k { color: #777; flex-shrink: 0; }
+        .pp-v { font-weight: 600; color: #222; }
+        .pp-v a { color: #1a5fb4; text-decoration: underline; word-break: break-all; }
+        .pp-v a:hover { color: var(--brand-accent); }
+
+        /* ----- أزرار التحكم الجديدة على الخريطة ----- */
+        .timeline-toggle i { font-size: 15px; }
+        .timeline-toggle.on a { background: var(--brand-tint-strong); }
+
+        /* ----- الخط الزمني ----- */
+        .timeline-bar {
+            display: none;
+            position: absolute;
+            left: 50%;
+            bottom: 26px;
+            transform: translateX(-50%);
+            width: min(760px, calc(100% - 140px));
+            z-index: 1000;
+            direction: rtl;
+            background: rgba(255,255,255,0.97);
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+            padding: 8px 14px 9px;
+            font-size: 12px;
+            color: #222;
+        }
+        .timeline-bar.show { display: block; }
+        .tl-row { display: flex; align-items: center; gap: 10px; }
+        .tl-btn {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            border: none;
+            border-radius: 50%;
+            background: var(--brand-accent);
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .tl-btn:hover { background: var(--brand-dark); }
+        .tl-btn.tl-close { background: #eee; color: #555; }
+        .tl-btn.tl-close:hover { background: #ddd; }
+        .tl-range { flex: 1; min-width: 0; accent-color: var(--brand-accent); }
+        .tl-date { min-width: 118px; text-align: center; font-weight: 700; color: var(--brand-dark); }
+        .tl-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; font-size: 11.5px; color: #444; }
+        .tl-sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-left: 4px; font-style: normal; }
+        .tl-note { color: #999; }
+
+        /* ----- أزرار التصدير ----- */
+        .attr-modal-export { cursor: pointer; color: #1d6f42; font-size: 17px; padding: 0 6px; }
+        .attr-modal-export:hover { color: #0e4d2c; }
+        .date-report-footer { display: flex; gap: 8px; }
+        .date-report-footer .layout-panel-print-btn { margin-top: 0; flex: 1; }
+        .layout-panel-print-btn.btn-excel { background: #1d6f42; }
+        .layout-panel-print-btn.btn-excel:hover { background: #0e4d2c; }
+
+        /* ----- الجوال والشاشات الصغيرة ----- */
+        @media (max-width: 820px) {
+            #topNavbar { height: 60px; padding: 0 12px; }
+            .navbar-title { font-size: 18px; }
+            .navbar-subtitle { font-size: 11px; }
+            .navbar-logo { height: 44px; }
+            #rightSidebar {
+                position: fixed;
+                top: 60px;
+                bottom: 0;
+                right: 0;
+                width: min(88vw, 330px);
+                transform: translateX(100%);
+                transition: transform .25s ease;
+                z-index: 1100;
+            }
+            body.sidebar-open #rightSidebar { transform: none; }
+            body.sidebar-collapsed #rightSidebar { display: block; }
+            body.sidebar-open #sidebarBackdrop {
+                display: block;
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.45);
+                z-index: 1050;
+            }
+            .timeline-bar { left: 12px; right: 12px; width: auto; transform: none; bottom: 18px; }
+            .tl-date { min-width: 90px; }
+        }
+        </style>
+        <title>أعمال الرفع المساحي</title>
+        <link rel="icon" type="image/png" href="images/logo.png">
+    </head>
+    <body>
+        <div id="topNavbar">
+            <div class="navbar-start"><button type="button" id="sidebarToggleBtn" class="sidebar-toggle-btn" title="إظهار/إخفاء الشريط الجانبي" aria-label="الشريط الجانبي"><i class="fas fa-bars"></i></button><div class="navbar-titles">
+                <h2 class="navbar-title">أعمال الرفع المساحي</h2>
+                <span class="navbar-subtitle">المنجزة والمستهدفة</span>
+            </div></div>
+                <a href="https://www.setsintl.net/" target="_blank" >
+                    <img src="images/logo.png" alt="Logo" class="navbar-logo" title="زيارة الموقع الرسمي">
+                </a>
+        </div>
+        <div id="contentArea">
+            <div id="rightSidebar">
+                <h4 class="sidebar-heading">ملخص الإنجاز</h4>
+                <div id="sidebarKpiSection"></div>
+                <h4 class="sidebar-heading">المفتاح</h4>
+                <div id="sidebarLayersSection"></div>
+                <h4 class="sidebar-heading">خريطة الأساس</h4>
+                <div id="sidebarBasemapSection"></div>
+                <h4 class="sidebar-heading">إحصائيات</h4>
+                <div id="sidebarStatsSection"></div>
+                <h4 class="sidebar-heading"> توزيع النسب</h4>
+                <div id="sidebarChartsSection"></div>
+            </div>
+            <div id="map">
+            </div>
+        </div>
+        <div id="sidebarBackdrop"></div>
+        <div class="attr-modal-overlay" id="attrModalOverlay">
+            <div class="attr-modal">
+                <div class="attr-modal-header">
+                    <h4 id="attrModalTitle">جدول البيانات</h4>
+                    <span class="attr-modal-count" id="attrModalCount"></span>
+                    <span class="attr-modal-export" id="attrModalExport" title="تصدير الجدول إلى Excel"><i class="fas fa-file-excel"></i></span>
+                    <span class="attr-modal-close" id="attrModalClose">&times;</span>
+                </div>
+                <div class="attr-modal-search">
+                    <input type="text" id="attrModalSearch" placeholder="بحث في الجدول...">
+                </div>
+                <div class="attr-modal-body">
+                    <table class="attr-table" id="attrModalTable"></table>
+                </div>
+            </div>
+        </div>
+        <!-- ME نافذة تخطيط الطباعة (Print Layout) -->
+        <div class="layout-panel" id="layoutPanel">
+            <div class="layout-panel-header">
+                <h4>تخطيط الطباعة</h4>
+                <span class="layout-panel-close" id="layoutPanelClose">&times;</span>
+            </div>
+            <div class="layout-panel-body">
+                <label for="layoutTitleInput">عنوان الخريطة</label>
+                <input type="text" id="layoutTitleInput" value="أعمال الرفع المساحي">
+                <div class="layout-panel-check">
+                    <input type="checkbox" id="layoutShowNorth" checked>
+                    <label for="layoutShowNorth" style="margin:0;">سهم الشمال</label>
+                </div>
+                <div class="layout-panel-check">
+                    <input type="checkbox" id="layoutShowLegend" checked>
+                    <label for="layoutShowLegend" style="margin:0;">المفتاح (الطبقات الظاهرة)</label>
+                </div>
+                <div class="layout-panel-check">
+                    <input type="checkbox" id="layoutShowDate" checked>
+                    <label for="layoutShowDate" style="margin:0;">التاريخ</label>
+                </div>
+                <div class="layout-panel-check">
+                    <input type="checkbox" id="layoutShowScale" checked>
+                    <label for="layoutShowScale" style="margin:0;">مقياس الرسم</label>
+                </div>
+                <button class="layout-panel-print-btn" id="layoutPrintBtn"><i class="fas fa-print"></i> طباعة</button>
+            </div>
+        </div>
+        <!-- ME نافذة تصفية الطبقات بالتاريخ وإنشاء تقرير -->
+        <div class="layout-panel date-filter-panel" id="dateFilterPanel">
+            <div class="layout-panel-header">
+                <h4>تصفية بالتاريخ</h4>
+                <span class="layout-panel-close" id="dateFilterPanelClose">&times;</span>
+            </div>
+            <div class="layout-panel-body">
+                <label for="dateFilterFrom">من تاريخ</label>
+                <input type="date" id="dateFilterFrom">
+                <label for="dateFilterTo">إلى تاريخ</label>
+                <input type="date" id="dateFilterTo">
+                <div class="date-filter-hint">تشمل الفلترة: الأحياء، الطرق المرفوعة، الحدائق. (طبقة الطرق المستهدفة غير مشمولة لعدم وجود حقل تاريخ فيها)</div>
+                <div class="date-filter-error" id="dateFilterError"></div>
+                <button class="layout-panel-print-btn" id="dateFilterApplyBtn"><i class="fas fa-filter"></i> تطبيق وعرض التقرير</button>
+                <button class="date-filter-reset-btn" id="dateFilterResetBtn"><i class="fas fa-undo"></i> إعادة تعيين</button>
+            </div>
+        </div>
+        <!-- ME نافذة تقرير الفلترة بالتاريخ -->
+        <div class="attr-modal-overlay date-report-modal-overlay" id="dateReportModalOverlay">
+            <div class="attr-modal date-report-modal">
+                <div class="attr-modal-header">
+                    <h4>تقرير الفلترة بالتاريخ</h4>
+                    <span class="attr-modal-count" id="dateReportCount"></span>
+                    <span class="attr-modal-close" id="dateReportModalClose">&times;</span>
+                </div>
+                <div class="date-report-range" id="dateReportRange"></div>
+                <div class="attr-modal-body">
+                    <div id="dateReportSummaryBox"></div>
+                    <h5 class="date-report-subheading">التفاصيل</h5>
+                    <div id="dateReportDetailBox"></div>
+                </div>
+                <div class="date-report-footer">
+                    <button class="layout-panel-print-btn" id="dateReportPrintBtn"><i class="fas fa-print"></i> طباعة / حفظ PDF</button>
+                    <button class="layout-panel-print-btn btn-excel" id="dateReportExportBtn"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+                </div>
+            </div>
+        </div>
+        <!-- عناصر تظهر فقط أثناء الطباعة -->
+        <div id="printNorthArrow" class="print-only">
+            <svg width="34" height="46" viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="17,0 27,30 17,23 7,30" fill="#222"></polygon>
+                <text x="17" y="44" font-size="13" text-anchor="middle" font-family="Arial" fill="#222">N</text>
+            </svg>
+        </div>
+        <div id="printTitleBox" class="print-only">
+            <h2 id="printTitleText"></h2>
+        </div>
+        <div id="printDateBox" class="print-only"></div>
+        <div id="printLegendBox" class="print-only">
+            <h5>المفتاح</h5>
+            <div id="printLegendItems"></div>
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/multi-style-layer.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="data/_2.js"></script>
+        <script src="data/_3.js"></script>
+        <script src="data/_4.js"></script>
+        <script src="data/_5.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[24.319614424283913,39.49460351565262],[24.591805822372766,40.03685994063099]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    var img = popup._contentNode.querySelector('td img');
+                    if (img) {
+                        // If already loaded (cache), update immediately
+                        if (img.complete && img.naturalHeight > 0) {
+                            popup.update();
+                        } else {
+                            img.addEventListener('load', function() {
+                                popup.update();
+                            });
+                            img.addEventListener('error', function() {
+                                popup.update();
+                            });
+                        }
+                    }
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        // ME تم نقل العنوان لشريط علوي ثابت (#topNavbar) بدل التحكم العائم
+
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        // ME زر فتح نافذة تخطيط الطباعة
+        var layoutToggle = new L.Control({ position: 'topleft' });
+        layoutToggle.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control layout-print-toggle');
+            div.innerHTML = '<a href="#" title="تخطيط الطباعة" role="button"><i class="fas fa-print"></i></a>';
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.on(div, 'click', function (e) {
+                L.DomEvent.preventDefault(e);
+                document.getElementById('layoutPanel').classList.toggle('open');
+            });
+            return div;
+        };
+        layoutToggle.addTo(map);
+        // ME زر إخفاء/إظهار تسميات الطبقات الدائمة (لأنها بتغطي البيانات على الخريطة)
+        var labelsToggle = new L.Control({ position: 'topleft' });
+        labelsToggle.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control labels-toggle-control');
+            div.innerHTML = '<a href="#" title="إخفاء/إظهار تسميات الطبقات" role="button"><i class="fas fa-tag"></i></a>';
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.on(div, 'click', function (e) {
+                L.DomEvent.preventDefault(e);
+                document.getElementById('map').classList.toggle('map-labels-hidden');
+                div.classList.toggle('labels-off');
+            });
+            return div;
+        };
+        labelsToggle.addTo(map);
+        // ME زر فتح نافذة التصفية بالتاريخ
+        var dateFilterToggle = new L.Control({ position: 'topleft' });
+        dateFilterToggle.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control date-filter-toggle');
+            div.innerHTML = '<a href="#" title="تصفية بالتاريخ" role="button"><i class="fas fa-calendar-alt"></i></a>';
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.on(div, 'click', function (e) {
+                L.DomEvent.preventDefault(e);
+                document.getElementById('dateFilterPanel').classList.toggle('open');
+            });
+            return div;
+        };
+        dateFilterToggle.addTo(map);
+        var scaleControl = L.control.scale({ position: 'bottomright', metric: true, imperial: false }).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_GoogleSatellite_0');
+        map.getPane('pane_GoogleSatellite_0').style.zIndex = 400;
+        var layer_GoogleSatellite_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_GoogleSatellite_0',
+            opacity: 0.5,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 30
+        });
+        layer_GoogleSatellite_0;
+        map.addLayer(layer_GoogleSatellite_0);
+        map.createPane('pane_Basemap01_1');
+        map.getPane('pane_Basemap01_1').style.zIndex = 401;
+        var layer_Basemap01_1 = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+            pane: 'pane_Basemap01_1',
+            opacity: 0.5,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 30
+        });
+        layer_Basemap01_1;
+        //map.addLayer(layer_Basemap01_1);
+        function pop__2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['DISTRICTNA'] !== null ? autolinker.link(String(feature.properties['DISTRICTNA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Data_Link'] !== null ? autolinker.link(String(feature.properties['Data_Link']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+        // ME طبقة الأحياء
+        var pattern__2_0 = new L.StripePattern({
+            weight: 1.0,
+            spaceWeight: 2.0,
+            color: '#f5a56e',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern__2_0.addTo(map);
+        function style__2_0() {
+            return {
+                pane: 'pane__2',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern__2_0,
+                interactive: true,
+            }
+        }
+        // ME حدود طبقة الأحياء
+        function style__2_1() {
+            return {
+                pane: 'pane__2',
+                opacity: 1,
+                color: 'rgba(244,106,10,0.7)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.5,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane__2');
+        map.getPane('pane__2').style.zIndex = 402;
+        map.getPane('pane__2').style['mix-blend-mode'] = 'normal';
+        var layer__2 = new L.geoJson.multiStyle(json__2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json__2',
+            layerName: 'layer__2',
+            pane: 'pane__2',
+            onEachFeature: pop__2,
+            styles: [style__2_0,style__2_1,]
+        });
+        bounds_group.addLayer(layer__2);
+        map.addLayer(layer__2);
+        function pop__3(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Road_ID'] !== null ? autolinker.link(String(feature.properties['Road_ID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Name_ID'] !== null ? autolinker.link(String(feature.properties['Name_ID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['الوصف'] !== null ? autolinker.link(String(feature.properties['الوصف']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+        // ME الطرق المستهدفة
+        function style__3_0() {
+            return {
+                pane: 'pane__3',
+                opacity: 1,
+                color: 'rgba(221,17,17,1.0)',
+                dashArray: '5',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 1.5,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane__3');
+        map.getPane('pane__3').style.zIndex = 403;
+        map.getPane('pane__3').style['mix-blend-mode'] = 'normal';
+        var layer__3 = new L.geoJson(json__3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json__3',
+            layerName: 'layer__3',
+            pane: 'pane__3',
+            onEachFeature: pop__3,
+            style: style__3_0,
+        });
+        bounds_group.addLayer(layer__3);
+        map.addLayer(layer__3);
+        function pop__4(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['NAME_ARABI'] !== null ? autolinker.link(String(feature.properties['NAME_ARABI']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Date'] !== null ? autolinker.link(String(feature.properties['Date']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Data_Link'] !== null ? autolinker.link(String(feature.properties['Data_Link']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+        // ME الطرق المرفوعة
+        function style__4_0() {
+            return {
+                pane: 'pane__4',
+                opacity: 1,
+                color: 'rgba(66,66,240,0.7)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane__4');
+        map.getPane('pane__4').style.zIndex = 404;
+        map.getPane('pane__4').style['mix-blend-mode'] = 'normal';
+        var layer__4 = new L.geoJson(json__4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json__4',
+            layerName: 'layer__4',
+            pane: 'pane__4',
+            onEachFeature: pop__4,
+            style: style__4_0,
+        });
+        bounds_group.addLayer(layer__4);
+        map.addLayer(layer__4);
+        function pop__5(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['الاسم'] !== null ? autolinker.link(String(feature.properties['الاسم']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Date'] !== null ? autolinker.link(String(feature.properties['Date']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Data_Link'] !== null ? autolinker.link(String(feature.properties['Data_Link']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+        // ME طبقة الحدائق حدود
+        function style__5_0() {
+            return {
+                pane: 'pane__5',
+                opacity: 1,
+                color: 'rgba(35,80,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 0.7,
+                fillColor: 'rgba(83,158,40,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane__5');
+        map.getPane('pane__5').style.zIndex = 405;
+        map.getPane('pane__5').style['mix-blend-mode'] = 'normal';
+        var layer__5 = new L.geoJson(json__5, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json__5',
+            layerName: 'layer__5',
+            pane: 'pane__5',
+            onEachFeature: pop__5,
+            style: style__5_0,
+        });
+        bounds_group.addLayer(layer__5);
+        map.addLayer(layer__5);
+        // ME بحث جغرافي عام (Geocoding) عبر Photon/Nominatim - محاط بحماية حتى لا يوقف باقي الصفحة لو المكتبة غير متوفرة
+        const url = {"Nominatim OSM": "https://nominatim.openstreetmap.org/search?format=geojson&addressdetails=1&",
+        "France BAN": "https://api-adresse.data.gouv.fr/search/?"}
+        try {
+            if (typeof L.control.photon === 'function' && typeof url !== 'undefined') {
+                var photonControl = L.control.photon({
+                    url: url["Nominatim OSM"],
+                    feedbackLabel: '',
+                    position: 'topleft',
+                    includePosition: true,
+                    initial: true,
+                    // resultsHandler: myHandler,
+                }).addTo(map);
+                photonControl._container.childNodes[0].style.borderRadius="10px"
+                // Create a variable to store the geoJSON data
+                var x = null;
+                // Create a variable to store the marker
+                var marker = null;
+                // Add an event listener to the Photon control to create a marker from the returned geoJSON data
+                var z = null;
+                photonControl.on('selected', function(e) {
+                    if (x != null) {
+                        map.removeLayer(obj3.marker);
+                        map.removeLayer(x);
+                    }
+                    obj2.gcd = e.choice;
+                    x = L.geoJSON(obj2.gcd).addTo(map);
+                    var label = typeof obj2.gcd.properties.label === 'undefined' ? obj2.gcd.properties.display_name : obj2.gcd.properties.label;
+                    obj3.marker = L.marker(x.getLayers()[0].getLatLng()).bindPopup(label).addTo(map);
+                    map.setView(x.getLayers()[0].getLatLng(), 17);
+                    z = typeof e.choice.properties.label === 'undefined'? e.choice.properties.display_name : e.choice.properties.label;
+                    e.target.input.value = z;
+                });
+                var search = document.getElementsByClassName("leaflet-photon leaflet-control")[0];
+                if (search) {
+                    search.classList.add("leaflet-control-search")
+                    search.style.display = "flex";
+                    search.style.backgroundColor="rgba(255,255,255,0.5)"
+
+                    // Create the new button element
+                    var button = document.createElement("div");
+                    button.id = "gcd-button-control";
+                    button.className = "gcd-gl-btn fa fa-search search-button";
+
+                    // Insert the button at the beginning of the search control
+                    search.insertBefore(button, search.firstChild);
+                    var lastEl = search.lastChild;
+                    lastEl.style.display = "none";
+                    button.addEventListener("click", function (e) {
+                        if (lastEl.style.display === "none") {
+                            lastEl.style.display = "block";
+                        } else {
+                            lastEl.style.display = "none";
+                        }
+                    });
+                }
+            } else {
+                console.warn('تنبيه: مكتبة leaflet.photon غير متوفرة (js/leaflet.photon.js) — تم تخطي مربع البحث الجغرافي العام دون التأثير على باقي الخريطة.');
+            }
+        } catch (photonErr) {
+            console.warn('تعذّر تفعيل البحث الجغرافي العام:', photonErr);
+        }
+        // ME البحث داخل طبقات الخريطة فقط (بدل البحث العالمي)
+        var searchFieldsMap = {
+            districts: { fc: json__2, title: 'الأحياء', fields: ['DISTRICTNA'] },
+            targetRoads: { fc: json__3, title: 'الطرق المستهدفة', fields: ['Road_ID', 'Name_ID'] },
+            roads: { fc: json__4, title: 'الطرق المرفوعة', fields: ['NAME_ARABI'] },
+            parks: { fc: json__5, title: 'الحدائق', fields: ['الاسم', 'Name'] }
+        };
+        function runLocalSearch(q) {
+            q = q.trim().toLowerCase();
+            if (!q) return [];
+            var results = [];
+            Object.keys(searchFieldsMap).forEach(function (key) {
+                var info = searchFieldsMap[key];
+                if (!info.fc || !info.fc.features) return;
+                info.fc.features.forEach(function (f, idx) {
+                    for (var i = 0; i < info.fields.length; i++) {
+                        var val = f.properties ? f.properties[info.fields[i]] : null;
+                        if (val !== null && val !== undefined && String(val).toLowerCase().indexOf(q) !== -1) {
+                            results.push({ key: key, idx: idx, label: String(val), layerTitle: info.title });
+                            break;
+                        }
+                    }
+                });
+            });
+            return results.slice(0, 30);
+        }
+        var localSearchControl = new L.Control({ position: 'topleft' });
+        localSearchControl.onAdd = function () {
+            var div = L.DomUtil.create('div', 'leaflet-control leaflet-local-search');
+            div.innerHTML =
+                '<div class="leaflet-local-search-bar">' +
+                '<i class="fas fa-search local-search-toggle" title="بحث في الطبقات"></i>' +
+                '<input type="text" id="localSearchInput" placeholder="ابحث في الطبقات..." style="display:none;">' +
+                '</div>' +
+                '<div id="localSearchResults" class="local-search-results" style="display:none;"></div>';
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        };
+        localSearchControl.addTo(map);
+        var localSearchToggle = document.querySelector('.local-search-toggle');
+        var localSearchInput = document.getElementById('localSearchInput');
+        var localSearchResults = document.getElementById('localSearchResults');
+        localSearchToggle.addEventListener('click', function () {
+            var showing = localSearchInput.style.display !== 'none';
+            localSearchInput.style.display = showing ? 'none' : 'inline-block';
+            localSearchResults.style.display = 'none';
+            if (!showing) localSearchInput.focus();
+        });
+        localSearchInput.addEventListener('input', function () {
+            var matches = runLocalSearch(this.value);
+            if (!matches.length) {
+                localSearchResults.innerHTML = this.value.trim() ?
+                    '<div class="local-search-empty">لا توجد نتائج</div>' : '';
+                localSearchResults.style.display = this.value.trim() ? 'block' : 'none';
+                return;
+            }
+            localSearchResults.innerHTML = matches.map(function (m, i) {
+                return '<div class="local-search-item" data-i="' + i + '">' + m.label +
+                    ' <span style="color:#999;">— ' + m.layerTitle + '</span></div>';
+            }).join('');
+            localSearchResults.style.display = 'block';
+            localSearchResults.querySelectorAll('.local-search-item').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    var m = matches[parseInt(this.getAttribute('data-i'), 10)];
+                    zoomToFeature(m.key, m.idx);
+                    localSearchResults.style.display = 'none';
+                    localSearchInput.value = m.label;
+                });
+            });
+        });
+        // ME المفتاح Legend
+        var overlaysTree = [
+            {label: '<img src="legend/_5.png" />  الحدائق', layer: layer__5},
+            {label: '<img src="legend/_4.png" />  الطرق', layer: layer__4},
+            {label: '<img src="legend/_3.png" /> الطرق المستهدفة', layer: layer__3},
+            {label: '<img src="legend/_2.png" /> أحياء البيئة العمرانية', layer: layer__2},
+            // ME: خرائط الأساس انتقلت إلى مبدّل خريطة الأساس في الشريط الجانبي (PRO-UI v2)
+            ]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: true,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+           collapsed: false,
+        });
+        lay.addTo(map);
+        var layTreeDiv = lay.getContainer();
+        layTreeDiv.classList.remove('leaflet-control');
+        document.getElementById('sidebarLayersSection').appendChild(layTreeDiv);
+
+        // إخفاء أي أزرار متبقية (احتياطي)
+        setTimeout(function() {
+            var toggles = layTreeDiv.querySelectorAll('.leaflet-layerstree-toggle, .leaflet-layerstree-toggle-close, .leaflet-layerstree-toggle-open, .leaflet-layerstree-toggle-btn');
+            toggles.forEach(function(el) {
+                el.style.display = 'none';
+            });
+        }, 100);
+
+        setBounds();
+
+                /* إعادة بناء صفوف المفتاح (checkbox / أيقونة / نص) بشكل صريح حتى تترافق كل الصفوف
+           في أعمدة ثابتة، بدل الاعتماد على ترتيب النص الثنائي الاتجاه اللي بيختلف حسب وجود صورة من عدمه */
+        function normalizeLegendRows() {
+            var names = layTreeDiv.querySelectorAll('.leaflet-layerstree-header-name');
+            names.forEach(function (nameSpan) {
+                var labelEl = nameSpan.closest('.leaflet-layerstree-header-label') || nameSpan.parentElement;
+                if (!labelEl || labelEl.dataset.legendNormalized) return;
+                var checkbox = labelEl.querySelector('input');
+                if (!checkbox) return;
+                var img = nameSpan.querySelector('img');
+                var imgSrc = img ? img.getAttribute('src') : null;
+                var text = nameSpan.textContent.trim();
+
+                labelEl.innerHTML = '';
+                labelEl.dataset.legendNormalized = '1';
+                labelEl.classList.add('legend-row-flex');
+
+                // 1. checkbox (أولاً - من اليمين)
+                labelEl.appendChild(checkbox);
+
+                // 2. الصورة (ثانياً)
+                var iconBox = document.createElement('span');
+                iconBox.className = 'legend-row-icon';
+                if (imgSrc) {
+                    var newImg = document.createElement('img');
+                    newImg.src = imgSrc;
+                    iconBox.appendChild(newImg);
+                }
+                labelEl.appendChild(iconBox);
+
+                // 3. الاسم (أخيراً - أقصى اليسار)
+                var textSpan = document.createElement('span');
+                textSpan.className = 'legend-row-text';
+                textSpan.textContent = text;
+                labelEl.appendChild(textSpan);
+            });
+        }
+        normalizeLegendRows();
+        // ME منطق نافذة تخطيط الطباعة
+        document.getElementById('layoutPanelClose').addEventListener('click', function () {
+            document.getElementById('layoutPanel').classList.remove('open');
+        });
+        document.getElementById('layoutPrintBtn').addEventListener('click', function () {
+            var titleVal = document.getElementById('layoutTitleInput').value.trim();
+            document.getElementById('printTitleText').textContent = titleVal || 'خريطة';
+
+            var showNorth = document.getElementById('layoutShowNorth').checked;
+            document.getElementById('printNorthArrow').style.display = showNorth ? 'block' : 'none';
+
+            var showDate = document.getElementById('layoutShowDate').checked;
+            var dateBox = document.getElementById('printDateBox');
+            if (showDate) {
+                var now = new Date();
+                dateBox.textContent = 'تاريخ الطباعة: ' + now.toLocaleDateString('ar-SA');
+                dateBox.style.display = 'block';
+            } else {
+                dateBox.style.display = 'none';
+            }
+
+            var showLegend = document.getElementById('layoutShowLegend').checked;
+            var legendBox = document.getElementById('printLegendBox');
+            if (showLegend) {
+                var itemsHtml = '';
+                overlaysTree.forEach(function (item) {
+                    if (item.layer && item.layer !== layer_Basemap01_1 && item.layer !== layer_GoogleSatellite_0 && map.hasLayer(item.layer)) {
+                        itemsHtml += '<div class="print-legend-item">' + item.label + '</div>';
+                    }
+                });
+                document.getElementById('printLegendItems').innerHTML = itemsHtml || '<div style="color:#999;">لا توجد طبقات ظاهرة</div>';
+                legendBox.style.display = 'block';
+            } else {
+                legendBox.style.display = 'none';
+            }
+
+            var showScale = document.getElementById('layoutShowScale').checked;
+            var scaleEl = document.querySelector('.leaflet-control-scale');
+            if (scaleEl) {
+                if (showScale) {
+                    scaleEl.style.removeProperty('display');
+                } else {
+                    scaleEl.style.setProperty('display', 'none', 'important');
+                }
+            }
+
+            document.getElementById('layoutPanel').classList.remove('open');
+
+            // ME: نفعّل تخطيط الطباعة فوراً (كلاس بدل انتظار حدث الطباعة الفعلي)
+            // عشان تاخذ الخريطة حجمها النهائي، ثم ننتظر تحميل بلاطات الأساس
+            // والطبقات فعلياً قبل ما نفتح نافذة الطباعة، فتتفادى الفراغ والتسميات
+            // اللي تطلع خارج حدود الصفحة.
+            document.body.classList.add('print-mode');
+            map.invalidateSize();
+
+            var printTimer = null;
+            function doPrint() {
+                if (printTimer) { clearTimeout(printTimer); printTimer = null; }
+                if (layer_GoogleSatellite_0) {
+                    layer_GoogleSatellite_0.off('load', doPrint);
+                }
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        window.print();
+                    });
+                });
+            }
+
+            // ننتظر اكتمال تحميل بلاطات الأساس بعد تكبير الخريطة لحجم الطباعة
+            if (layer_GoogleSatellite_0 && map.hasLayer(layer_GoogleSatellite_0)) {
+                layer_GoogleSatellite_0.once('load', doPrint);
+            }
+            // سقف أقصى للانتظار (شبكة بطيئة أو الحدث ما انطلق) حتى ما تعلق الطباعة
+            printTimer = setTimeout(doPrint, 4000);
+        });
+        window.addEventListener('afterprint', function () {
+            document.body.classList.remove('print-mode');
+            map.invalidateSize();
+        });
+        window.addEventListener('beforeprint', function () {
+            map.invalidateSize();
+        });
+        var i = 0;
+        layer__2.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['DISTRICTNA'] !== null?String('<div style="color: #b86c21;background-color: rgba(255, 255, 255, 0.5); font-size: 10pt; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['DISTRICTNA']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css__2'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer__4.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['NAME_ARABI'] !== null?String('<div style="color: #090bad;background-color: rgba(255, 255, 255, 0.5); font-size: 10pt; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['NAME_ARABI']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css__4'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer__5.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['الاسم'] !== null?String('<div style="color: #227330;background-color: rgba(255, 255, 255, 0.4); font-size: 10pt; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['الاسم']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css__5'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        resetLabels([layer__2,layer__4,layer__5]);
+        map.on("zoomend", function(){
+            resetLabels([layer__2,layer__4,layer__5]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer__2,layer__4,layer__5]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer__2,layer__4,layer__5]);
+        });
+
+        // ME لوحة الإحصائيات (Dashboard)
+        // مساحة مضلع جيوديسي (متر مربع) - نفس صيغة L.GeometryUtil.geodesicArea
+        function ringAreaM2(ring) {
+            var pointsCount = ring.length, area = 0.0, d2r = Math.PI / 180, p1, p2;
+            if (pointsCount > 2) {
+                for (var i = 0; i < pointsCount; i++) {
+                    p1 = ring[i];
+                    p2 = ring[(i + 1) % pointsCount];
+                    area += ((p2[0] - p1[0]) * d2r) *
+                        (2 + Math.sin(p1[1] * d2r) + Math.sin(p2[1] * d2r));
+                }
+                area = area * 6378137.0 * 6378137.0 / 2.0;
+            }
+            return Math.abs(area);
+        }
+        function polygonAreaM2(coords) {
+            var area = ringAreaM2(coords[0]);
+            for (var i = 1; i < coords.length; i++) {
+                area -= ringAreaM2(coords[i]);
+            }
+            return area;
+        }
+        function geometryAreaM2(geometry) {
+            if (!geometry) return 0;
+            if (geometry.type === 'Polygon') {
+                return polygonAreaM2(geometry.coordinates);
+            } else if (geometry.type === 'MultiPolygon') {
+                var total = 0;
+                geometry.coordinates.forEach(function (poly) { total += polygonAreaM2(poly); });
+                return total;
+            }
+            return 0;
+        }
+        // طول جيوديسي (متر) باستخدام معادلة Haversine
+        function haversineM(p1, p2) {
+            var R = 6378137.0, d2r = Math.PI / 180;
+            var dLat = (p2[1] - p1[1]) * d2r;
+            var dLng = (p2[0] - p1[0]) * d2r;
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(p1[1] * d2r) * Math.cos(p2[1] * d2r) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+        function lineLengthM(coords) {
+            var len = 0;
+            for (var i = 0; i < coords.length - 1; i++) { len += haversineM(coords[i], coords[i + 1]); }
+            return len;
+        }
+        function geometryLengthM(geometry) {
+            if (!geometry) return 0;
+            if (geometry.type === 'LineString') {
+                return lineLengthM(geometry.coordinates);
+            } else if (geometry.type === 'MultiLineString') {
+                var total = 0;
+                geometry.coordinates.forEach(function (line) { total += lineLengthM(line); });
+                return total;
+            }
+            return 0;
+        }
+        function summarizeFeatureCollection(fc, kind) {
+            var count = 0, sum = 0;
+            if (fc && fc.features) {
+                fc.features.forEach(function (f) {
+                    count += 1;
+                    sum += kind === 'area' ? geometryAreaM2(f.geometry) : geometryLengthM(f.geometry);
+                });
+            }
+            return { count: count, sum: sum };
+        }
+        function fmtKm2(m2) { return (m2 / 1000000).toLocaleString('ar-EG', { maximumFractionDigits: 2 }); }
+        function fmtKm(m) { return (m / 1000).toLocaleString('ar-EG', { maximumFractionDigits: 2 }); }
+
+        var statsDistricts = summarizeFeatureCollection(json__2, 'area');       // الأحياء
+        var statsTargetRoads = summarizeFeatureCollection(json__3, 'length');   // الطرق المستهدفة
+        var statsRoads = summarizeFeatureCollection(json__4, 'length');        // الطرق المرفوعة
+        var statsParks = summarizeFeatureCollection(json__5, 'area');          // الحدائق
+
+        var totalCount = statsDistricts.count + statsTargetRoads.count + statsRoads.count + statsParks.count;
+        var totalAreaM2 = statsDistricts.sum + statsParks.sum;
+        var totalLengthM = statsTargetRoads.sum + statsRoads.sum;
+        var roadsProgressPct = (statsTargetRoads.sum + statsRoads.sum) > 0 ? (statsRoads.sum / (statsTargetRoads.sum + statsRoads.sum)) * 100 : null;
+        var roadsProgressText = roadsProgressPct === null ? '—' : roadsProgressPct.toLocaleString('ar-EG', { maximumFractionDigits: 1 }) + '%';
+
+        // خرائط ربط مفاتيح الإحصائيات بطبقات الخريطة الفعلية
+        var statsLayerMap = {
+            districts: layer__2,
+            targetRoads: layer__3,
+            roads: layer__4,
+            parks: layer__5
+        };
+        var activeStatFilter = null;
+        var pieChartWraps = [];
+
+        // إظهار طبقة واحدة فقط على الخريطة (أو الكل إذا key = null)
+        function applyMapFilter(key) {
+            Object.keys(statsLayerMap).forEach(function (k) {
+                var lyr = statsLayerMap[k];
+                var shouldShow = (key === null || k === key);
+                if (shouldShow && !map.hasLayer(lyr)) {
+                    map.addLayer(lyr);
+                } else if (!shouldShow && map.hasLayer(lyr)) {
+                    map.removeLayer(lyr);
+                }
+            });
+            resetLabels([layer__2, layer__4, layer__5]);
+        }
+
+        // إبراز/إخفاء الصفوف في لوحة الإحصائيات بحسب الفلتر النشط
+        function applyDashboardFilter(key, div) {
+            var rows = div.querySelectorAll('tr.stat-row');
+            rows.forEach(function (row) {
+                var rowKey = row.getAttribute('data-key');
+                row.classList.remove('active-row');
+                row.classList.remove('hidden-row');
+                if (key !== null && rowKey !== key) {
+                    row.classList.add('hidden-row');
+                } else if (key !== null && rowKey === key) {
+                    row.classList.add('active-row');
+                }
+            });
+            var totalRows = div.querySelectorAll('tr.total-row');
+            totalRows.forEach(function (tr) {
+                tr.classList.toggle('hidden-row', key !== null);
+            });
+            var resetBtn = div.querySelector('.reset-filter-btn');
+            if (resetBtn) {
+                resetBtn.style.display = key !== null ? 'block' : 'none';
+            }
+
+            // ===== إخفاء/إظهار صفوف المفتاح مع الحفاظ على الأبعاد =====
+            var legendHeaders = document.querySelectorAll('#rightSidebar .leaflet-layerstree-header');
+            legendHeaders.forEach(function (header) {
+                var checkbox = header.querySelector('input[type="checkbox"]');
+                if (!checkbox) return;
+                // نبحث عن الطبقة المرتبطة بهذا الصف
+                var layerName = null;
+                var label = header.querySelector('.leaflet-layerstree-header-name');
+                if (label) {
+                    var text = label.textContent.trim();
+                    // مطابقة النص مع مفاتيح الطبقات
+                    var keyMap = {
+                        'الحدائق': 'parks',
+                        'الطرق': 'roads',
+                        'الطرق المستهدفة': 'targetRoads',
+                        'أحياء البيئة العمرانية': 'districts'
+                    };
+                    layerName = keyMap[text] || null;
+                }
+                if (layerName) {
+                    header.classList.toggle('hidden-row', key !== null && key !== layerName);
+                }
+            });
+        }
+
+        // إبراز/تعتيم شرائح المخططات الدائرية وصفوف مفتاحها بحسب الفلتر النشط
+        function applyPieChartFilter(key) {
+            pieChartWraps.forEach(function (wrap) {
+                wrap.querySelectorAll('.pie-slice').forEach(function (el) {
+                    var k = el.getAttribute('data-key');
+                    el.classList.toggle('dimmed-slice', key !== null && k !== key);
+                    el.classList.toggle('active-slice', key !== null && k === key);
+                });
+                wrap.querySelectorAll('.pie-legend-row').forEach(function (el) {
+                    var k = el.getAttribute('data-key');
+                    el.classList.toggle('dimmed-row', key !== null && k !== key);
+                    el.classList.toggle('active-legend-row', key !== null && k === key);
+                });
+            });
+        }
+
+        function toggleStatFilter(key, div) {
+            activeStatFilter = (activeStatFilter === key) ? null : key;
+            applyMapFilter(activeStatFilter);
+            applyDashboardFilter(activeStatFilter, div);
+            applyPieChartFilter(activeStatFilter);
+        }
+
+        var dashboard = new L.Control({ position: 'bottomright' });
+        dashboard.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'stats-dashboard');
+            div.innerHTML =
+                '<h3 id="statsToggle">إحصائيات <span class="toggle-arrow">▼</span></h3>' +
+                '<div class="stats-body">' +
+                '<div class="reset-filter-btn">↺ إظهار كل الطبقات</div>' +
+                '<table>' +
+                '<tr><td></td><td class="col-header">العدد</td><td class="col-header">المساحة/الطول</td></tr>' +
+                '<tr class="stat-row" data-key="districts">' +
+                '<td class="layer-name"><div class="layer-name-flex"><span class="swatch" style="background:#f46a0a"></span><span>الأحياء</span><i class="fas fa-table attr-btn" data-key="districts" title="عرض جدول البيانات"></i></div></td>' +
+                '<td class="num-cell">' + statsDistricts.count.toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">' + fmtKm2(statsDistricts.sum) + ' كم²</td>' +
+                '</tr>' +
+                '<tr class="stat-row" data-key="targetRoads">' +
+                '<td class="layer-name"><div class="layer-name-flex"><span class="swatch" style="background:#dd1111"></span><span>الطرق المستهدفة</span><i class="fas fa-table attr-btn" data-key="targetRoads" title="عرض جدول البيانات"></i></div></td>' +
+                '<td class="num-cell">' + statsTargetRoads.count.toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">' + fmtKm(statsTargetRoads.sum) + ' كم</td>' +
+                '</tr>' +
+                '<tr class="stat-row" data-key="roads">' +
+                '<td class="layer-name"><div class="layer-name-flex"><span class="swatch" style="background:#4242f0"></span><span>الطرق المرفوعة</span><i class="fas fa-table attr-btn" data-key="roads" title="عرض جدول البيانات"></i></div></td>' +
+                '<td class="num-cell">' + statsRoads.count.toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">' + fmtKm(statsRoads.sum) + ' كم</td>' +
+                '</tr>' +
+                '<tr class="stat-row" data-key="parks">' +
+                '<td class="layer-name"><div class="layer-name-flex"><span class="swatch" style="background:#539e28"></span><span>الحدائق</span><i class="fas fa-table attr-btn" data-key="parks" title="عرض جدول البيانات"></i></div></td>' +
+                '<td class="num-cell">' + statsParks.count.toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">' + fmtKm2(statsParks.sum) + ' كم²</td>' +
+                '</tr>' +
+                '<tr class="total-row">' +
+                '<td class="layer-name">إجمالي المساحات</td>' +
+                '<td class="num-cell">' + (statsDistricts.count + statsParks.count).toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">' + fmtKm2(totalAreaM2) + ' كم²</td>' +
+                '</tr>' +
+                '<tr class="total-row">' +
+                '<td class="layer-name">نسبة إنجاز الطرق</td>' +
+                '<td class="num-cell">—</td>' +
+                '<td class="num-cell">' + roadsProgressText + '</td>' +
+                '</tr>' +
+                '</table>' +
+                '</div>';
+            L.DomEvent.disableClickPropagation(div);
+            L.DomEvent.disableScrollPropagation(div);
+
+            // النقر على أي صف طبقة يعزلها على الخريطة وفي اللوحة (والنقر مرة أخرى يعيد إظهار الكل)
+            div.querySelectorAll('tr.stat-row').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    toggleStatFilter(row.getAttribute('data-key'), div);
+                });
+            });
+            // زر إظهار كل الطبقات
+            div.querySelector('.reset-filter-btn').addEventListener('click', function () {
+                activeStatFilter = null;
+                applyMapFilter(null);
+                applyDashboardFilter(null, div);
+                applyPieChartFilter(null);
+            });
+
+            return div;
+        };
+        dashboard.addTo(map);
+        var dashboardDiv = dashboard.getContainer();
+        document.getElementById('sidebarStatsSection').appendChild(dashboardDiv);
+        document.getElementById('statsToggle').addEventListener('click', function () {
+            var panel = this.closest('.stats-dashboard');
+            panel.classList.toggle('collapsed');
+            var arrow = this.querySelector('.toggle-arrow');
+            arrow.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+        });
+
+        // ME مخططات دائرية تفاعلية للمساحات والأطوال
+        function polarToCartesian(cx, cy, r, angleDeg) {
+            var angleRad = (angleDeg - 90) * Math.PI / 180.0;
+            return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+        }
+        function describeArcPath(cx, cy, r, startAngle, endAngle) {
+            var start = polarToCartesian(cx, cy, r, endAngle);
+            var end = polarToCartesian(cx, cy, r, startAngle);
+            var largeArcFlag = (endAngle - startAngle) <= 180 ? '0' : '1';
+            return ['M', cx, cy, 'L', start.x, start.y, 'A', r, r, 0, largeArcFlag, 0, end.x, end.y, 'Z'].join(' ');
+        }
+        // يبني مخططاً دائرياً تفاعلياً (SVG) مع مفتاح ألوان، ويربط النقر على أي شريحة/صف بفلتر الطبقات في الخريطة
+        function buildPieChart(sectionEl, title, items) {
+            var svgNS = 'http://www.w3.org/2000/svg';
+            var total = items.reduce(function (s, it) { return s + it.value; }, 0);
+            var nonZeroItems = items.filter(function (it) { return it.value > 0; });
+
+            var wrap = document.createElement('div');
+            wrap.className = 'pie-chart-wrap';
+
+            var heading = document.createElement('div');
+            heading.className = 'pie-chart-title';
+            heading.textContent = title;
+            wrap.appendChild(heading);
+
+            var svg = document.createElementNS(svgNS, 'svg');
+            svg.setAttribute('viewBox', '0 0 120 120');
+            svg.setAttribute('class', 'pie-chart-svg');
+            var cx = 60, cy = 60, r = 55;
+
+            if (total > 0 && nonZeroItems.length === 1) {
+                var circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cy);
+                circle.setAttribute('r', r);
+                circle.setAttribute('fill', nonZeroItems[0].color);
+                circle.setAttribute('class', 'pie-slice');
+                circle.setAttribute('data-key', nonZeroItems[0].key);
+                var t0 = document.createElementNS(svgNS, 'title');
+                t0.textContent = nonZeroItems[0].label + ' — 100%';
+                circle.appendChild(t0);
+                svg.appendChild(circle);
+            } else if (total > 0) {
+                var cumulative = 0;
+                items.forEach(function (it) {
+                    if (it.value <= 0) return;
+                    var fraction = it.value / total;
+                    var startAngle = cumulative * 360;
+                    cumulative += fraction;
+                    var endAngle = cumulative * 360;
+                    var path = document.createElementNS(svgNS, 'path');
+                    path.setAttribute('d', describeArcPath(cx, cy, r, startAngle, endAngle));
+                    path.setAttribute('fill', it.color);
+                    path.setAttribute('class', 'pie-slice');
+                    path.setAttribute('data-key', it.key);
+                    var t = document.createElementNS(svgNS, 'title');
+                    t.textContent = it.label + ' — ' + (fraction * 100).toLocaleString('ar-EG', { maximumFractionDigits: 1 }) + '%';
+                    path.appendChild(t);
+                    svg.appendChild(path);
+                });
+            }
+            wrap.appendChild(svg);
+
+            var legend = document.createElement('div');
+            legend.className = 'pie-legend';
+            items.forEach(function (it) {
+                var pct = total > 0 ? (it.value / total) * 100 : 0;
+                var row = document.createElement('div');
+                row.className = 'pie-legend-row';
+                row.setAttribute('data-key', it.key);
+                row.innerHTML =
+                    '<span class="pie-swatch" style="background:' + it.color + '"></span>' +
+                    '<span class="pie-legend-label">' + it.label + '</span>' +
+                    '<span class="pie-legend-pct">' + pct.toLocaleString('ar-EG', { maximumFractionDigits: 1 }) + '%</span>';
+                legend.appendChild(row);
+            });
+            wrap.appendChild(legend);
+
+            sectionEl.appendChild(wrap);
+
+            wrap.querySelectorAll('.pie-slice, .pie-legend-row').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    toggleStatFilter(this.getAttribute('data-key'), dashboardDiv);
+                });
+            });
+
+            pieChartWraps.push(wrap);
+            return wrap;
+        }
+
+        var sidebarChartsSection = document.getElementById('sidebarChartsSection');
+        buildPieChart(sidebarChartsSection, 'نسب المساحات', [
+            { key: 'districts', label: 'الأحياء', color: '#f46a0a', value: statsDistricts.sum },
+            { key: 'parks', label: 'الحدائق', color: '#539e28', value: statsParks.sum }
+        ]);
+                // ===== خط فاصل بين المخططين =====
+        var separator = document.createElement('hr');
+        separator.style.cssText = 'border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 8px 0;';
+        sidebarChartsSection.appendChild(separator);
+        buildPieChart(sidebarChartsSection, 'نسب الأطوال', [
+            { key: 'targetRoads', label: 'الطرق المستهدفة', color: '#dd1111', value: statsTargetRoads.sum },
+            { key: 'roads', label: 'الطرق المرفوعة', color: '#4242f0', value: statsRoads.sum }
+        ]);
+
+        // ME جدول البيانات الوصفية (Attribute Table)
+        var statsJsonMap = {
+            districts: { fc: json__2, title: 'الأحياء' },
+            targetRoads: { fc: json__3, title: 'الطرق المستهدفة' },
+            roads: { fc: json__4, title: 'الطرق المرفوعة' },
+            parks: { fc: json__5, title: 'الحدائق' }
+        };
+
+        function formatCellValue(v) {
+            if (v === null || v === undefined) return '';
+            if (typeof v === 'object') return JSON.stringify(v);
+            return String(v);
+        }
+
+        var currentAttrKey = null;
+
+        function zoomToFeature(key, idx) {
+            var layer = statsLayerMap[key];
+            if (!layer) return;
+            var target = null, i = 0;
+            layer.eachLayer(function (l) {
+                if (i === idx) target = l;
+                i++;
+            });
+            if (!target) return;
+            // تأكد من إظهار الطبقة على الخريطة حتى لو كانت مخفية بسبب فلتر نشط
+            if (activeStatFilter !== null && activeStatFilter !== key) {
+                activeStatFilter = null;
+                applyMapFilter(null);
+                var dashDiv = document.querySelector('.stats-dashboard');
+                if (dashDiv) applyDashboardFilter(null, dashDiv);
+                applyPieChartFilter(null);
+            }
+            if (!map.hasLayer(layer)) {
+                map.addLayer(layer);
+            }
+            if (typeof target.getBounds === 'function') {
+                map.fitBounds(target.getBounds(), { maxZoom: 19 });
+            } else if (typeof target.getLatLng === 'function') {
+                map.setView(target.getLatLng(), 19);
+            }
+            if (typeof target.openPopup === 'function') {
+                setTimeout(function () { target.openPopup(); }, 300);
+            }
+        }
+
+        function openAttributeTable(key) {
+            var info = statsJsonMap[key];
+            if (!info || !info.fc || !info.fc.features) return;
+            currentAttrKey = key;
+            var features = info.fc.features;
+            var columns = [];
+            features.forEach(function (f) {
+                Object.keys(f.properties || {}).forEach(function (k) {
+                    if (columns.indexOf(k) === -1) columns.push(k);
+                });
+            });
+            var thead = '<thead><tr>' + columns.map(function (c) {
+                return '<th>' + c + '</th>';
+            }).join('') + '</tr></thead>';
+            var tbody = '<tbody>' + features.map(function (f, idx) {
+                return '<tr data-idx="' + idx + '" title="اضغط للتوجه إلى الموقع">' + columns.map(function (c) {
+                    return '<td>' + formatCellValue(f.properties ? f.properties[c] : '') + '</td>';
+                }).join('') + '</tr>';
+            }).join('') + '</tbody>';
+            document.getElementById('attrModalTable').innerHTML = thead + tbody;
+            document.getElementById('attrModalTitle').textContent = 'جدول البيانات - ' + info.title;
+            document.getElementById('attrModalCount').textContent = features.length.toLocaleString('ar-EG') + ' عنصر';
+            document.getElementById('attrModalSearch').value = '';
+            document.getElementById('attrModalOverlay').classList.add('open');
+        }
+
+        function closeAttributeTable() {
+            document.getElementById('attrModalOverlay').classList.remove('open');
+        }
+
+        document.getElementById('attrModalClose').addEventListener('click', closeAttributeTable);
+        document.getElementById('attrModalSearch').addEventListener('input', function () {
+            var q = this.value.trim().toLowerCase();
+            var rows = document.querySelectorAll('#attrModalTable tbody tr');
+            rows.forEach(function (row) {
+                var text = row.textContent.toLowerCase();
+                row.style.display = (q === '' || text.indexOf(q) !== -1) ? '' : 'none';
+            });
+        });
+        document.querySelectorAll('.attr-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                openAttributeTable(this.getAttribute('data-key'));
+            });
+        });
+        document.getElementById('attrModalTable').addEventListener('click', function (e) {
+            var tr = e.target.closest('tr');
+            if (!tr || !tr.parentElement || tr.parentElement.tagName !== 'TBODY') return;
+            var idx = parseInt(tr.getAttribute('data-idx'), 10);
+            if (isNaN(idx) || !currentAttrKey) return;
+            zoomToFeature(currentAttrKey, idx);
+            var prev = tr.parentElement.querySelector('.attr-row-selected');
+            if (prev) prev.classList.remove('attr-row-selected');
+            tr.classList.add('attr-row-selected');
+        });
+        // ME تصفية الطبقات بحسب فترة تاريخية وإنشاء تقرير (ملخص + جدول تفصيلي)
+        var DATE_FIELD_MAP = {
+            districts: 'Date',
+            roads: 'Date',
+            parks: 'Date'
+            // targetRoads مستبعدة: لا يوجد فيها حقل تاريخ
+        };
+        var LABEL_FIELD_MAP = {
+            districts: ['DISTRICTNA'],
+            roads: ['NAME_ARABI'],
+            parks: ['الاسم', 'Name']
+        };
+        var GEOM_KIND_MAP = {
+            districts: 'area',
+            roads: 'length',
+            parks: 'area'
+        };
+        function fmtAreaCell(m2) {
+            if (m2 >= 100000) return (m2 / 1000000).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' كم²';
+            return m2.toLocaleString('ar-EG', { maximumFractionDigits: 0 }) + ' م²';
+        }
+        function fmtLengthCell(m) {
+            if (m >= 1000) return (m / 1000).toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' كم';
+            return m.toLocaleString('ar-EG', { maximumFractionDigits: 0 }) + ' م';
+        }
+        function fmtMeasure(kind, val) {
+            return kind === 'area' ? fmtAreaCell(val) : fmtLengthCell(val);
+        }
+        // نبني، لكل عنصر (feature)، قائمة بكل الطبقات الفرعية الفعلية المسؤولة عن رسمه + الحاوية
+        // (الأب) المباشرة لكل واحدة منها. هذا ضروري خصوصاً لطبقة الأحياء لأنها تستخدم
+        // L.geoJson.multiStyle، والتي ترسم كل معلم بأكثر من نمط (نمطين هنا)، وكل نمط له
+        // طبقة GeoJSON داخلية خاصة به تحوي كل المعالم — فحاوية العنصر الفعلية ليست الطبقة
+        // الرئيسية statsLayerMap[key] نفسها، بل الطبقة الفرعية الداخلية لكل نمط. لذلك نمشي
+        // في شجرة الطبقات بشكل متكرر ونطابق كل طبقة رسم مع عنصرها الأصلي عبر مرجع الكائن
+        // (feature)، بدل الاعتماد على ترتيب eachLayer على المستوى الأول فقط.
+        function walkFeatureLayers(node, featureIndexMap, outEntries) {
+            if (!node || typeof node.eachLayer !== 'function') return;
+            var children = [];
+            node.eachLayer(function (l) { children.push(l); });
+            children.forEach(function (child) {
+                if (child.feature && featureIndexMap.has(child.feature)) {
+                    outEntries[featureIndexMap.get(child.feature)].push({ parent: node, child: child });
+                } else if (typeof child.eachLayer === 'function') {
+                    walkFeatureLayers(child, featureIndexMap, outEntries);
+                }
+            });
+        }
+        var allFeatureLayersMap = {};
+        Object.keys(DATE_FIELD_MAP).forEach(function (key) {
+            var lyr = statsLayerMap[key];
+            var info = statsJsonMap[key];
+            var features = (info && info.fc && info.fc.features) || [];
+            var featureIndexMap = new Map();
+            features.forEach(function (f, i) { featureIndexMap.set(f, i); });
+            var outEntries = features.map(function () { return []; });
+            if (lyr) walkFeatureLayers(lyr, featureIndexMap, outEntries);
+            allFeatureLayersMap[key] = outEntries;
+        });
+
+        function getLabelValue(props, key) {
+            var fields = LABEL_FIELD_MAP[key] || [];
+            for (var i = 0; i < fields.length; i++) {
+                var v = props ? props[fields[i]] : null;
+                if (v !== null && v !== undefined && v !== '') return v;
+            }
+            return '';
+        }
+
+        function parseFlexibleDate(v) {
+            if (v === null || v === undefined || v === '') return null;
+            if (typeof v === 'number') {
+                var dNum = new Date(v > 1e12 ? v : v * 1000);
+                return isNaN(dNum.getTime()) ? null : dNum;
+            }
+            var s = String(v).trim();
+            if (!s) return null;
+            var iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (iso) {
+                var d1 = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+                if (!isNaN(d1.getTime())) return d1;
+            }
+            var dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (dmy) {
+                var dd = Number(dmy[1]), mm = Number(dmy[2]), yyyy = Number(dmy[3]);
+                if (mm > 12) { var tmp = dd; dd = mm; mm = tmp; }
+                var d2 = new Date(yyyy, mm - 1, dd);
+                if (!isNaN(d2.getTime())) return d2;
+            }
+            var d3 = new Date(s);
+            return isNaN(d3.getTime()) ? null : d3;
+        }
+
+        function parseInputDate(val, endOfDay) {
+            if (!val) return null;
+            var parts = val.split('-');
+            if (parts.length !== 3) return null;
+            var d = endOfDay
+                ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999)
+                : new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0, 0);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        var lastReportRangeLabel = '', lastReportSummaryHtml = '';
+        var lastReportData = null;
+
+        function applyDateFilter(fromVal, toVal) {
+            var fromDate = parseInputDate(fromVal, false);
+            var toDate = parseInputDate(toVal, true);
+            var summary = {};
+            var reportRows = [];
+
+            Object.keys(DATE_FIELD_MAP).forEach(function (key) {
+                var info = statsJsonMap[key];
+                var field = DATE_FIELD_MAP[key];
+                var kind = GEOM_KIND_MAP[key];
+                var entriesArr = allFeatureLayersMap[key];
+                var features = (info && info.fc && info.fc.features) || [];
+                var matched = 0;
+                var matchedMeasureSum = 0;
+                features.forEach(function (f, idx) {
+                    var props = f.properties || {};
+                    var d = parseFlexibleDate(props[field]);
+                    var inRange = d !== null && (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
+                    var entries = entriesArr[idx] || [];
+                    entries.forEach(function (entry) {
+                        if (inRange && !entry.parent.hasLayer(entry.child)) entry.parent.addLayer(entry.child);
+                        else if (!inRange && entry.parent.hasLayer(entry.child)) entry.parent.removeLayer(entry.child);
+                    });
+                    if (inRange) {
+                        matched++;
+                        var measureVal = kind === 'area' ? geometryAreaM2(f.geometry) : geometryLengthM(f.geometry);
+                        matchedMeasureSum += measureVal;
+                        reportRows.push({
+                            title: info.title,
+                            label: getLabelValue(props, key),
+                            dateDisplay: d.toLocaleDateString('ar-SA'),
+                            measureDisplay: fmtMeasure(kind, measureVal),
+                            dateObj: d,
+                            measureRaw: measureVal,
+                            kind: kind
+                        });
+                    }
+                });
+                summary[key] = { matched: matched, total: features.length, title: info.title, kind: kind, matchedMeasureSum: matchedMeasureSum };
+            });
+
+            resetLabels([layer__2, layer__4, layer__5]);
+            buildDateReport(summary, reportRows, fromVal, toVal);
+        }
+
+        function resetDateFilter() {
+            Object.keys(DATE_FIELD_MAP).forEach(function (key) {
+                var entriesArr = allFeatureLayersMap[key];
+                entriesArr.forEach(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (!entry.parent.hasLayer(entry.child)) entry.parent.addLayer(entry.child);
+                    });
+                });
+            });
+            resetLabels([layer__2, layer__4, layer__5]);
+            document.getElementById('dateFilterFrom').value = '';
+            document.getElementById('dateFilterTo').value = '';
+            document.getElementById('dateFilterError').style.display = 'none';
+            closeDateReport();
+        }
+
+        function buildDateReport(summary, reportRows, fromVal, toVal) {
+            lastReportData = { summary: summary, rows: reportRows.slice(), from: fromVal, to: toVal };
+            var totalMatched = 0, totalAll = 0;
+            var summaryHtml = '<table class="date-report-summary-table">' +
+                '<tr><td></td><td class="col-header">العدد ضمن الفترة</td><td class="col-header">الإجمالي</td><td class="col-header">المساحة/الطول ضمن الفترة</td></tr>';
+            Object.keys(summary).forEach(function (key) {
+                var s = summary[key];
+                totalMatched += s.matched;
+                totalAll += s.total;
+                summaryHtml += '<tr><td class="layer-name">' + s.title + '</td>' +
+                    '<td class="num-cell">' + s.matched.toLocaleString('ar-EG') + '</td>' +
+                    '<td class="num-cell">' + s.total.toLocaleString('ar-EG') + '</td>' +
+                    '<td class="num-cell">' + fmtMeasure(s.kind, s.matchedMeasureSum) + '</td></tr>';
+            });
+            summaryHtml += '<tr class="total-row"><td class="layer-name">المجموع</td>' +
+                '<td class="num-cell">' + totalMatched.toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">' + totalAll.toLocaleString('ar-EG') + '</td>' +
+                '<td class="num-cell">—</td></tr></table>';
+
+            reportRows.sort(function (a, b) { return a.title.localeCompare(b.title, 'ar'); });
+            var detailHtml = '<table class="attr-table" id="dateReportDetailTable"><thead><tr>' +
+                '<th>الطبقة</th><th>المعرف/الاسم</th><th>التاريخ</th><th>المساحة/الطول</th></tr></thead><tbody>';
+            if (reportRows.length === 0) {
+                detailHtml += '<tr><td colspan="4" style="text-align:center;color:#999;">لا توجد عناصر ضمن هذه الفترة</td></tr>';
+            } else {
+                reportRows.forEach(function (r) {
+                    detailHtml += '<tr><td>' + r.title + '</td><td>' + (r.label || '') + '</td><td>' + r.dateDisplay + '</td><td>' + r.measureDisplay + '</td></tr>';
+                });
+            }
+            detailHtml += '</tbody></table>';
+
+            var rangeLabel = 'من ' + (fromVal || '(بداية البيانات)') + ' إلى ' + (toVal || '(الآن)');
+            lastReportRangeLabel = rangeLabel;
+            lastReportSummaryHtml = summaryHtml;
+            document.getElementById('dateReportRange').textContent = rangeLabel;
+            document.getElementById('dateReportSummaryBox').innerHTML = summaryHtml;
+            document.getElementById('dateReportDetailBox').innerHTML = detailHtml;
+            document.getElementById('dateReportCount').textContent = totalMatched.toLocaleString('ar-EG') + ' عنصر مطابق';
+            document.getElementById('dateReportModalOverlay').classList.add('open');
+        }
+
+        function closeDateReport() {
+            document.getElementById('dateReportModalOverlay').classList.remove('open');
+        }
+
+        function printDateReport() {
+            var win = window.open('', '_blank', 'width=900,height=700');
+            if (!win) { alert('يرجى السماح بالنوافذ المنبثقة لطباعة التقرير'); return; }
+            var detailHtml = document.getElementById('dateReportDetailBox').innerHTML;
+            var html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">' +
+                '<title>تقرير الفلترة بالتاريخ</title><style>' +
+                'body{font-family:"Open Sans",Tahoma,Arial,sans-serif;direction:rtl;padding:24px;color:#222;}' +
+                'h2{margin:0 0 4px;} h3{margin:18px 0 6px;font-size:14px;}' +
+                '.range{color:#555;font-size:12.5px;margin-bottom:14px;}' +
+                'table{border-collapse:collapse;width:100%;margin-bottom:10px;font-size:12px;}' +
+                'th,td{border:1px solid #ccc;padding:5px 8px;text-align:right;}' +
+                'th{background:#f2f2f2;} .total-row{font-weight:700;background:#fafafa;}' +
+                '@media print { @page { margin: 14mm; } }' +
+                '</style></head><body>' +
+                '<h2>تقرير الفلترة بالتاريخ</h2>' +
+                '<div class="range">' + lastReportRangeLabel + '</div>' +
+                '<h3>الملخص</h3>' + lastReportSummaryHtml +
+                '<h3>التفاصيل</h3>' + detailHtml +
+                '</body></html>';
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            setTimeout(function () {
+                try { win.focus(); win.print(); } catch (e) { }
+            }, 300);
+        }
+
+        document.getElementById('dateFilterPanelClose').addEventListener('click', function () {
+            document.getElementById('dateFilterPanel').classList.remove('open');
+        });
+        document.getElementById('dateFilterApplyBtn').addEventListener('click', function () {
+            var fromVal = document.getElementById('dateFilterFrom').value;
+            var toVal = document.getElementById('dateFilterTo').value;
+            var errEl = document.getElementById('dateFilterError');
+            if (fromVal && toVal && fromVal > toVal) {
+                errEl.textContent = 'تاريخ البداية يجب أن يسبق تاريخ النهاية';
+                errEl.style.display = 'block';
+                return;
+            }
+            errEl.style.display = 'none';
+            applyDateFilter(fromVal, toVal);
+            document.getElementById('dateFilterPanel').classList.remove('open');
+        });
+        document.getElementById('dateFilterResetBtn').addEventListener('click', resetDateFilter);
+        document.getElementById('dateReportModalClose').addEventListener('click', closeDateReport);
+        document.getElementById('dateReportPrintBtn').addEventListener('click', printDateReport);
+
+                // ====================================================================================
+        // ===== PRO-UI v2 — تحسينات إضافية (كتلة مستقلة تعتمد على بيانات الطبقات فقط) =====
+        // عند تحديث بيانات QGIS2WEB (ملفات data/_N.js) لا يلزم تعديل هذه الكتلة.
+        // ====================================================================================
+        (function () {
+            'use strict';
+
+            function safe(name, fn) {
+                try { fn(); } catch (err) { console.warn('PRO-UI [' + name + ']:', err); }
+            }
+            function esc(s) {
+                return String(s === null || s === undefined ? '' : s)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
+            // يمشي على كل الطبقات الورقية التي لها feature (يدعم multiStyle ذات الطبقات المتداخلة)
+            function leafLayers(root, fn) {
+                if (!root || typeof root.eachLayer !== 'function') return;
+                root.eachLayer(function (l) {
+                    if (l.feature) fn(l);
+                    else if (typeof l.eachLayer === 'function') leafLayers(l, fn);
+                });
+            }
+            function pickProp(p, names) {
+                for (var i = 0; i < names.length; i++) {
+                    var v = p ? p[names[i]] : null;
+                    if (v !== null && v !== undefined && String(v).trim() !== '') return v;
+                }
+                return '';
+            }
+            function fmtPct(p) {
+                return p.toLocaleString('ar-EG', { maximumFractionDigits: 1 }) + '%';
+            }
+            window.PROUI = window.PROUI || {};
+
+            // ================= 1) مبدّل خريطة الأساس =================
+            safe('basemap', function () {
+                var host = document.getElementById('sidebarBasemapSection');
+                if (!host) return;
+                map.createPane('pane_BaseLight');
+                map.getPane('pane_BaseLight').style.zIndex = 400;
+                var layerBaseLight = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                    pane: 'pane_BaseLight',
+                    opacity: 1,
+                    minZoom: 1,
+                    maxZoom: 28,
+                    maxNativeZoom: 16,
+                    attribution: 'Esri'
+                });
+                var options = [
+                    { id: 'light', label: 'فاتحة', layer: layerBaseLight, opacity: 1 },
+                    { id: 'sat', label: 'فضائية', layer: layer_GoogleSatellite_0, opacity: 0.5 },
+                    { id: 'topo', label: 'طبوغرافية', layer: layer_Basemap01_1, opacity: 0.5 },
+                    { id: 'none', label: 'بدون', layer: null, opacity: 1 }
+                ];
+                host.innerHTML = '<div class="bm-seg">' + options.map(function (o) {
+                    return '<button type="button" class="bm-btn" data-id="' + o.id + '">' + o.label + '</button>';
+                }).join('') + '</div>' +
+                    '<div class="bm-opacity"><span>وضوح الخلفية</span>' +
+                    '<input type="range" id="bmOpacity" min="0.1" max="1" step="0.05" value="0.5">' +
+                    '<span id="bmOpacityVal"></span></div>';
+                var btns = host.querySelectorAll('.bm-btn');
+                var slider = document.getElementById('bmOpacity');
+                var sliderVal = document.getElementById('bmOpacityVal');
+                function current() {
+                    for (var i = 0; i < options.length; i++) {
+                        if (options[i].layer && map.hasLayer(options[i].layer)) return options[i];
+                    }
+                    return options[3];
+                }
+                function paintOpacity(v) {
+                    sliderVal.textContent = Math.round(v * 100).toLocaleString('ar-EG') + '%';
+                }
+                function refreshUi() {
+                    var cur = current();
+                    btns.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-id') === cur.id); });
+                    slider.disabled = !cur.layer;
+                    if (cur.layer) {
+                        slider.value = cur.layer.options.opacity;
+                        paintOpacity(cur.layer.options.opacity);
+                    } else {
+                        sliderVal.textContent = '';
+                    }
+                }
+                function select(id) {
+                    options.forEach(function (o) {
+                        if (o.layer && map.hasLayer(o.layer)) map.removeLayer(o.layer);
+                    });
+                    var o = options.filter(function (x) { return x.id === id; })[0];
+                    if (o && o.layer) {
+                        o.layer.options.opacity = o.opacity;
+                        map.addLayer(o.layer);
+                    }
+                    refreshUi();
+                }
+                btns.forEach(function (b) {
+                    b.addEventListener('click', function () { select(b.getAttribute('data-id')); });
+                });
+                slider.addEventListener('input', function () {
+                    var c = current();
+                    if (!c.layer) return;
+                    var v = parseFloat(slider.value);
+                    c.layer.setOpacity(v);
+                    paintOpacity(v);
+                });
+                refreshUi();
+            });
+
+            // ================= 2) بطاقات الأرقام ونسبة الإنجاز =================
+            safe('kpi', function () {
+                var host = document.getElementById('sidebarKpiSection');
+                if (!host) return;
+                var roadsTotal = statsTargetRoads.sum + statsRoads.sum;
+                var pct = roadsTotal > 0 ? (statsRoads.sum / roadsTotal) * 100 : null;
+                var barW = pct === null ? 0 : Math.max(0, Math.min(100, pct));
+                var cards = [
+                    { key: 'districts', color: '#f46a0a', label: 'الأحياء', num: statsDistricts.count.toLocaleString('ar-EG'), sub: fmtKm2(statsDistricts.sum) + ' كم²' },
+                    { key: 'parks', color: '#539e28', label: 'الحدائق', num: statsParks.count.toLocaleString('ar-EG'), sub: fmtKm2(statsParks.sum) + ' كم²' },
+                    { key: 'roads', color: '#4242f0', label: 'الطرق المرفوعة', num: statsRoads.count.toLocaleString('ar-EG'), sub: fmtKm(statsRoads.sum) + ' كم' },
+                    { key: 'targetRoads', color: '#dd1111', label: 'الطرق المستهدفة', num: statsTargetRoads.count.toLocaleString('ar-EG'), sub: fmtKm(statsTargetRoads.sum) + ' كم' }
+                ];
+                host.innerHTML =
+                    '<div class="kpi-progress">' +
+                    '<div class="kpi-progress-head"><span>نسبة إنجاز الطرق</span><span class="kpi-progress-pct">' + (pct === null ? '—' : fmtPct(pct)) + '</span></div>' +
+                    '<div class="kpi-bar"><div class="kpi-bar-fill" style="width:' + barW + '%"></div></div>' +
+                    '<div class="kpi-progress-sub">' + fmtKm(statsRoads.sum) + ' كم مرفوع من إجمالي ' + fmtKm(roadsTotal) + ' كم (مرفوع + مستهدف)</div>' +
+                    '</div>' +
+                    '<div class="kpi-grid">' + cards.map(function (c) {
+                        return '<div class="kpi-card" data-key="' + c.key + '" style="--kc:' + c.color + '" title="اضغط لعزل الطبقة على الخريطة">' +
+                            '<div class="kpi-card-label">' + c.label + '</div>' +
+                            '<div class="kpi-card-num">' + c.num + '</div>' +
+                            '<div class="kpi-card-sub">' + c.sub + '</div></div>';
+                    }).join('') + '</div>';
+                host.querySelectorAll('.kpi-card').forEach(function (c) {
+                    c.addEventListener('click', function () {
+                        toggleStatFilter(c.getAttribute('data-key'), dashboardDiv);
+                    });
+                });
+                window.applyKpiFilter = function (key) {
+                    host.querySelectorAll('.kpi-card').forEach(function (c) {
+                        var k = c.getAttribute('data-key');
+                        c.classList.toggle('active', key !== null && k === key);
+                        c.classList.toggle('dimmed', key !== null && k !== key);
+                    });
+                };
+                // نربط إبراز البطاقات بنفس دالة الفلترة الموجودة دون تعديلها
+                var origPieFilter = applyPieChartFilter;
+                applyPieChartFilter = function (key) {
+                    origPieFilter(key);
+                    window.applyKpiFilter(key);
+                };
+            });
+
+            // ================= 4) نوافذ منبثقة منسّقة =================
+            safe('popups', function () {
+                var CFG = [
+                    { layer: layer__2, name: 'حي', color: '#f46a0a', kind: 'area', title: ['DISTRICTNA'],
+                      rows: [{ f: 'Date', k: 'تاريخ الرفع', date: true }], link: 'Data_Link' },
+                    { layer: layer__3, name: 'طريق مستهدف', color: '#dd1111', kind: 'length', title: ['Name_ID', 'Road_ID'],
+                      rows: [{ f: 'Road_ID', k: 'رقم الطريق' }, { f: 'Name_ID', k: 'الاسم' }, { f: 'الوصف', k: 'الوصف' }] },
+                    { layer: layer__4, name: 'طريق مرفوع', color: '#4242f0', kind: 'length', title: ['NAME_ARABI'],
+                      rows: [{ f: 'Date', k: 'تاريخ الرفع', date: true }], link: 'Data_Link' },
+                    { layer: layer__5, name: 'حديقة', color: '#539e28', kind: 'area', title: ['الاسم', 'Name'],
+                      rows: [{ f: 'Date', k: 'تاريخ الرفع', date: true }], link: 'Data_Link' }
+                ];
+                function fmtDateBoth(v) {
+                    var d = parseFlexibleDate(v);
+                    if (!d) return esc(v);
+                    return esc(d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })) +
+                        ' <small style="color:#888">(' + esc(d.toLocaleDateString('ar-SA')) + ')</small>';
+                }
+                // يحوّل النص إلى رابط مباشر عبر Autolinker (كما في تصدير QGIS2WEB)، وإن لم يتعرف عليه يُعرض كرابط عادي
+                function lnk(v, forceAnchor) {
+                    var s = String(v).trim(), h;
+                    try { h = autolinker.link(s); } catch (e) { h = esc(s); }
+                    if (forceAnchor && h.indexOf('<a ') === -1) {
+                        h = '<a href="' + esc(s) + '" target="_blank" rel="noopener">' + esc(s) + '</a>';
+                    }
+                    return h;
+                }
+                function buildPopup(cfg, f) {
+                    var p = f.properties || {};
+                    var title = pickProp(p, cfg.title);
+                    var rows = '';
+                    function add(k, v) {
+                        rows += '<div class="pp-row"><span class="pp-k">' + esc(k) + '</span><span class="pp-v">' + v + '</span></div>';
+                    }
+                    cfg.rows.forEach(function (r) {
+                        var v = p[r.f];
+                        if (v === null || v === undefined || String(v).trim() === '') return;
+                        if (String(v) === String(title)) return;
+                        add(r.k, r.date ? fmtDateBoth(v) : lnk(v));
+                    });
+                    var measure = cfg.kind === 'area' ? geometryAreaM2(f.geometry) : geometryLengthM(f.geometry);
+                    add(cfg.kind === 'area' ? 'المساحة' : 'الطول', esc(fmtMeasure(cfg.kind, measure)));
+                    var link = cfg.link ? p[cfg.link] : null;
+                    if (link !== null && link !== undefined && String(link).trim() !== '') {
+                        add('رابط البيانات', lnk(link, true));
+                    }
+                    return '<div class="pp" style="--pp-c:' + cfg.color + '">' +
+                        '<div class="pp-head"><span class="pp-chip">' + esc(cfg.name) + '</span>' +
+                        '<div class="pp-title">' + esc(title || cfg.name) + '</div></div>' +
+                        '<div class="pp-body">' + rows + '</div></div>';
+                }
+                CFG.forEach(function (cfg) {
+                    leafLayers(cfg.layer, function (l) {
+                        var f = l.feature;
+                        l.off('popupopen');   // يلغي معالج الوسائط القديم المرتبط بالنافذة الأصلية
+                        l.unbindPopup();
+                        l.bindPopup(function () { return buildPopup(cfg, f); },
+                            { className: 'pro-popup', maxWidth: 300, minWidth: 220, maxHeight: 400 });
+                    });
+                });
+            });
+
+            // ================= 5) التسميات: تظهر حسب مستوى التقريب =================
+            safe('labels-zoom', function () {
+                var MIN_ZOOM = { css__2: 12, css__4: 15, css__5: 14 };   // أحياء / طرق / حدائق
+                var el = map.getContainer();
+                function upd() {
+                    var z = map.getZoom();
+                    Object.keys(MIN_ZOOM).forEach(function (k) {
+                        el.classList.toggle('lbl-off-' + k, z < MIN_ZOOM[k]);
+                    });
+                }
+                map.on('zoomend', upd);
+                upd();
+            });
+
+            // ================= 6) الخط الزمني للأعمال المنجزة =================
+            safe('timeline', function () {
+                var DAY = 86400000;
+                var COLORS = { districts: '#f46a0a', roads: '#4242f0', parks: '#539e28' };
+                var keys = Object.keys(DATE_FIELD_MAP);
+                var items = [], undated = [], minTs = Infinity, maxTs = -Infinity;
+                keys.forEach(function (key) {
+                    var info = statsJsonMap[key], kind = GEOM_KIND_MAP[key], field = DATE_FIELD_MAP[key];
+                    var feats = (info && info.fc && info.fc.features) || [];
+                    feats.forEach(function (f, idx) {
+                        var d = parseFlexibleDate(f.properties ? f.properties[field] : null);
+                        if (!d) { undated.push({ key: key, idx: idx }); return; }
+                        var ts = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                        if (ts < minTs) minTs = ts;
+                        if (ts > maxTs) maxTs = ts;
+                        items.push({ key: key, idx: idx, ts: ts, m: kind === 'area' ? geometryAreaM2(f.geometry) : geometryLengthM(f.geometry) });
+                    });
+                });
+                if (!items.length) return;   // لا توجد تواريخ في البيانات: لا نُظهر الزر
+                items.forEach(function (it) { it.day = Math.round((it.ts - minTs) / DAY); });
+                var totalDays = Math.max(1, Math.round((maxTs - minTs) / DAY));
+
+                var bar = document.createElement('div');
+                bar.className = 'timeline-bar';
+                bar.innerHTML =
+                    '<div class="tl-row">' +
+                    '<button type="button" class="tl-btn tl-play" title="تشغيل / إيقاف"><i class="fas fa-play"></i></button>' +
+                    '<input type="range" class="tl-range" min="0" max="' + totalDays + '" step="1" value="' + totalDays + '">' +
+                    '<span class="tl-date"></span>' +
+                    '<button type="button" class="tl-btn tl-close" title="إغلاق الخط الزمني"><i class="fas fa-times"></i></button>' +
+                    '</div><div class="tl-stats"></div>';
+                map.getContainer().appendChild(bar);
+                L.DomEvent.disableClickPropagation(bar);
+                L.DomEvent.disableScrollPropagation(bar);
+                var range = bar.querySelector('.tl-range');
+                var dateEl = bar.querySelector('.tl-date');
+                var statsEl = bar.querySelector('.tl-stats');
+                var playBtn = bar.querySelector('.tl-play');
+                var playing = false, timer = null, lblTimer = null, btnWrap = null;
+
+                function setVis(entries, show) {
+                    (entries || []).forEach(function (e) {
+                        var has = e.parent.hasLayer(e.child);
+                        if (show && !has) e.parent.addLayer(e.child);
+                        else if (!show && has) e.parent.removeLayer(e.child);
+                    });
+                }
+                function refreshLabels() {
+                    clearTimeout(lblTimer);
+                    lblTimer = setTimeout(function () { resetLabels([layer__2, layer__4, layer__5]); }, 150);
+                }
+                function update() {
+                    var v = parseInt(range.value, 10) || 0;
+                    var sums = {};
+                    keys.forEach(function (k) { sums[k] = { n: 0, m: 0 }; });
+                    items.forEach(function (it) {
+                        var show = it.day <= v;
+                        if (show) { sums[it.key].n++; sums[it.key].m += it.m; }
+                        setVis((allFeatureLayersMap[it.key] || [])[it.idx], show);
+                    });
+                    undated.forEach(function (u) { setVis((allFeatureLayersMap[u.key] || [])[u.idx], false); });
+                    dateEl.textContent = new Date(minTs + v * DAY).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' });
+                    var html = keys.map(function (k) {
+                        var s = sums[k];
+                        return '<span><i class="tl-sw" style="background:' + (COLORS[k] || '#888') + '"></i>' +
+                            esc(statsJsonMap[k].title) + ': <b>' + s.n.toLocaleString('ar-EG') + '</b> (' +
+                            esc(fmtMeasure(GEOM_KIND_MAP[k], s.m)) + ')</span>';
+                    }).join('');
+                    if ((statsTargetRoads.sum + statsRoads.sum) > 0 && sums.roads) {
+                        html += '<span>إنجاز الطرق: <b>' + fmtPct((sums.roads.m / (statsTargetRoads.sum + statsRoads.sum)) * 100) + '</b></span>';
+                    }
+                    if (undated.length) {
+                        html += '<span class="tl-note">(' + undated.length.toLocaleString('ar-EG') + ' عنصر بلا تاريخ غير معروض)</span>';
+                    }
+                    statsEl.innerHTML = html;
+                    refreshLabels();
+                }
+                function stop() {
+                    playing = false;
+                    clearInterval(timer);
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+                function play() {
+                    if (parseInt(range.value, 10) >= totalDays) range.value = 0;
+                    playing = true;
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                    var step = Math.max(1, Math.ceil(totalDays / 40));
+                    update();
+                    timer = setInterval(function () {
+                        var v = parseInt(range.value, 10) + step;
+                        if (v >= totalDays) { range.value = totalDays; update(); stop(); return; }
+                        range.value = v;
+                        update();
+                    }, 450);
+                }
+                function openTl() {
+                    bar.classList.add('show');
+                    if (btnWrap) btnWrap.classList.add('on');
+                    range.value = totalDays;
+                    update();
+                }
+                function closeTl() {
+                    stop();
+                    bar.classList.remove('show');
+                    if (btnWrap) btnWrap.classList.remove('on');
+                    keys.forEach(function (k) {
+                        (allFeatureLayersMap[k] || []).forEach(function (entries) { setVis(entries, true); });
+                    });
+                    refreshLabels();
+                }
+                playBtn.addEventListener('click', function () { if (playing) stop(); else play(); });
+                range.addEventListener('input', function () { if (playing) stop(); update(); });
+                bar.querySelector('.tl-close').addEventListener('click', closeTl);
+
+                var ctl = new L.Control({ position: 'topleft' });
+                ctl.onAdd = function () {
+                    btnWrap = L.DomUtil.create('div', 'leaflet-bar leaflet-control timeline-toggle');
+                    btnWrap.innerHTML = '<a href="#" title="الخط الزمني للأعمال المنجزة" role="button"><i class="fas fa-history"></i></a>';
+                    L.DomEvent.disableClickPropagation(btnWrap);
+                    L.DomEvent.on(btnWrap, 'click', function (e) {
+                        L.DomEvent.preventDefault(e);
+                        if (bar.classList.contains('show')) closeTl(); else openTl();
+                    });
+                    return btnWrap;
+                };
+                ctl.addTo(map);
+            });
+
+            // ================= 7) تصدير Excel (مع بديل CSV عند عدم توفر الإنترنت) =================
+            safe('export', function () {
+                var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                function loadXlsx(cb) {
+                    if (window.XLSX && window.XLSX.utils) { cb(true); return; }
+                    var s = document.createElement('script');
+                    s.src = XLSX_URL;
+                    s.onload = function () { cb(!!(window.XLSX && window.XLSX.utils)); };
+                    s.onerror = function () { cb(false); };
+                    document.head.appendChild(s);
+                }
+                function toCsv(rows) {
+                    return rows.map(function (r) {
+                        return r.map(function (c) {
+                            var s = (c === null || c === undefined) ? '' : String(c);
+                            return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+                        }).join(',');
+                    }).join('\r\n');
+                }
+                function download(blob, name) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = name;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
+                }
+                function pad(n) { return (n < 10 ? '0' : '') + n; }
+                function isoDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+                function sheetName(n, i) {
+                    var s = String(n || ('Sheet' + (i + 1))).replace(/[\[\]:*?\/\\]/g, ' ').trim().slice(0, 31);
+                    return s || ('Sheet' + (i + 1));
+                }
+                function exportSheets(base, sheets) {
+                    loadXlsx(function (ok) {
+                        var file = base + '_' + isoDate(new Date());
+                        if (ok) {
+                            var wb = window.XLSX.utils.book_new();
+                            var used = {};
+                            sheets.forEach(function (sh, i) {
+                                var ws = window.XLSX.utils.aoa_to_sheet(sh.rows);
+                                var widths = [];
+                                sh.rows.forEach(function (r) {
+                                    r.forEach(function (c, ci) {
+                                        var l = String(c === null || c === undefined ? '' : c).length;
+                                        if (!widths[ci] || widths[ci] < l) widths[ci] = l;
+                                    });
+                                });
+                                ws['!cols'] = widths.map(function (w) { return { wch: Math.min(60, w + 3) }; });
+                                var nm = sheetName(sh.name, i), root = nm, n = 2;
+                                while (used[nm]) { nm = root.slice(0, 28) + ' ' + (n++); }
+                                used[nm] = true;
+                                window.XLSX.utils.book_append_sheet(wb, ws, nm);
+                            });
+                            wb.Workbook = { Views: [{ RTL: true }] };
+                            window.XLSX.writeFile(wb, file + '.xlsx');
+                        } else {
+                            var text = '\uFEFF' + sheets.map(function (sh) {
+                                return (sheets.length > 1 ? sh.name + '\r\n' : '') + toCsv(sh.rows);
+                            }).join('\r\n\r\n');
+                            download(new Blob([text], { type: 'text/csv;charset=utf-8' }), file + '.csv');
+                        }
+                    });
+                }
+                function unitOf(kind) { return kind === 'area' ? 'م²' : 'م'; }
+                function round2(v) { return Math.round(v * 100) / 100; }
+
+                // تقرير الفلترة بالتاريخ
+                var reportBtn = document.getElementById('dateReportExportBtn');
+                if (reportBtn) {
+                    reportBtn.addEventListener('click', function () {
+                        var r = window.lastReportData;
+                        if (!r) return;
+                        var info = [['الفترة', 'من ' + (r.from || '(بداية البيانات)') + ' إلى ' + (r.to || '(الآن)')]];
+                        var sum = [['الطبقة', 'العدد ضمن الفترة', 'الإجمالي', 'المساحة/الطول ضمن الفترة', 'الوحدة']];
+                        Object.keys(r.summary).forEach(function (k) {
+                            var s = r.summary[k];
+                            sum.push([s.title, s.matched, s.total, round2(s.matchedMeasureSum), unitOf(s.kind)]);
+                        });
+                        var det = [['الطبقة', 'المعرف/الاسم', 'التاريخ', 'المساحة/الطول', 'الوحدة']];
+                        r.rows.forEach(function (x) {
+                            det.push([x.title, x.label || '', x.dateObj ? isoDate(x.dateObj) : x.dateDisplay, round2(x.measureRaw || 0), unitOf(x.kind)]);
+                        });
+                        exportSheets('survey-report', [
+                            { name: 'الملخص', rows: info.concat([[]], sum) },
+                            { name: 'التفاصيل', rows: det }
+                        ]);
+                    });
+                }
+                // جدول البيانات الوصفية (يصدّر الصفوف الظاهرة بعد البحث)
+                var attrBtn = document.getElementById('attrModalExport');
+                if (attrBtn) {
+                    attrBtn.addEventListener('click', function () {
+                        var table = document.getElementById('attrModalTable');
+                        var head = Array.prototype.map.call(table.querySelectorAll('thead th'), function (th) { return th.textContent; });
+                        if (!head.length) return;
+                        var rows = [head];
+                        table.querySelectorAll('tbody tr').forEach(function (tr) {
+                            if (tr.style.display === 'none') return;
+                            rows.push(Array.prototype.map.call(tr.children, function (td) { return td.textContent; }));
+                        });
+                        var title = (document.getElementById('attrModalTitle').textContent || 'table').replace('جدول البيانات - ', '');
+                        exportSheets('survey-table', [{ name: title, rows: rows }]);
+                    });
+                }
+            });
+
+            // ================= 8) الشريط الجانبي: طيّ على الحاسوب / درج على الجوال =================
+            safe('sidebar', function () {
+                var btn = document.getElementById('sidebarToggleBtn');
+                var backdrop = document.getElementById('sidebarBackdrop');
+                if (!btn) return;
+                var mq = window.matchMedia('(max-width: 820px)');
+                function refresh() { setTimeout(function () { map.invalidateSize(); }, 300); }
+                btn.addEventListener('click', function () {
+                    if (mq.matches) document.body.classList.toggle('sidebar-open');
+                    else document.body.classList.toggle('sidebar-collapsed');
+                    refresh();
+                });
+                if (backdrop) {
+                    backdrop.addEventListener('click', function () { document.body.classList.remove('sidebar-open'); });
+                }
+                window.addEventListener('resize', function () {
+                    if (!mq.matches) document.body.classList.remove('sidebar-open');
+                });
+            });
+        })();
+
+        setTimeout(function () { map.invalidateSize(); }, 200);
+        </script>        
+    </body>
+</html>
